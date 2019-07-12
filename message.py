@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import re
 
+
 class Message():
     date = 0
     from_id = 0
@@ -32,29 +33,19 @@ class Message():
         return ''
 
     # мб переписать при помощь регулярки
-    
+
     def parse_bot(self):
-        self.text = self.text.strip().lower() 
-        if self.text.find('работяга') == 0:
+        self.text = self.text.strip().lower()
+        if re.match('работяга', self.text):
+            self.text = self.text.replace(self.text[:9], '')
+            if len(self.text) < 2:
+                return False
             return True
         else:
             return False
 
-    def parse_command(self):
-        # переписать
-        # re.match("помощь", self.text)
-        if self.text.find('помощь') == 9:
-            return 'help', 'msg'
-        if self.text.find('рандом') == 9:
-            return 'random', 'msg'
-        if self.text.find('выбери') == 9:
-            return 'random_array', 'msg'
-        if self.text.find('кик') == 9:
-            return 'kick', 'do'
-        return '','msg'            
-    
     def parse_users(self):
-        users = re.findall(r'\w+\|\w+', self.text)
+        users = re.findall(r'\w+\|@?\w+', self.text)
         if not users:
             return False
-        +
+        return users

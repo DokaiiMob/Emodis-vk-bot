@@ -3,6 +3,7 @@
 
 from config import *
 from peewee import *
+from random import randint
 import datetime
 import peewee
 
@@ -46,6 +47,15 @@ class Chat(BaseModel):
         order_by = ('id',)
 
 
+class TypeSet(BaseModel):
+    id = PrimaryKeyField(null=False)
+    title = CharField(max_length=255)
+
+    class Meta:
+        db_table = "type_set"
+        order_by = ('id',)
+
+
 class User(BaseModel):
     id = PrimaryKeyField(null=False)
     full_name = CharField(max_length=100)
@@ -83,6 +93,8 @@ class StatsUser(BaseModel):
     date_time_last_msg = DateTimeField(
         default=datetime.datetime.now())
     len = IntegerField(null=False, default=0)
+    is_banned = IntegerField(null=False, default=0)
+    is_pred = IntegerField(null=False, default=0)
 
     class Meta:
         db_table = "user_to_chat"
@@ -101,6 +113,19 @@ class Texts(BaseModel):
 
     class Meta:
         db_table = "texts"
+        order_by = ('id',)
+
+
+class Settings(BaseModel):
+    id = PrimaryKeyField(null=False)
+    id_type = ForeignKeyField(User, db_column='id_type', related_name='fk_type',
+                              to_field='id', on_delete='cascade', on_update='cascade')
+    id_chat = ForeignKeyField(Chat, db_column='id_chat', related_name='fk_chat',
+                              to_field='id', on_delete='cascade', on_update='cascade')
+    val = TextField(null=False, default='')
+
+    class Meta:
+        db_table = "settings"
         order_by = ('id',)
 
 
@@ -146,12 +171,12 @@ def add_stats_user(user_id, chat_id):
 
     try:
         user = User.select().where(User.id == int(user_id)).get()
-    except DoesNotExist as de:
+    except User.DoesNotExist as de:
         user_exist = False
 
     try:
         chat = Chat.select().where(Chat.id == int(chat_id)).get()
-    except DoesNotExist as de:
+    except Chat.DoesNotExist as de:
         chat_exist = False
 
     if user_exist and chat_exist:
@@ -167,12 +192,12 @@ def add_text(user_id, chat_id, msg, attach):
 
     try:
         user = User.select().where(User.id == int(user_id)).get()
-    except DoesNotExist as de:
+    except User.DoesNotExist as de:
         user_exist = False
 
     try:
         chat = Chat.select().where(Chat.id == int(chat_id)).get()
-    except DoesNotExist as de:
+    except Chat.DoesNotExist as de:
         chat_exist = False
 
     if user_exist and chat_exist:
@@ -205,7 +230,7 @@ def find_stats_user_and_chat(id_user, id_chat):
     exist = True
     try:
         stats = find_all_stats(id_user, id_chat)
-    except DoesNotExist as de:
+    except Stats.DoesNotExist as de:
         exist = False
     if not exist:
         add_stats(id_user, id_chat)
@@ -224,7 +249,7 @@ def find_stats_addit_user_and_chat(id_user, id_chat):
     exist = True
     try:
         stats = find_all_stats_user(id_user, id_chat)
-    except DoesNotExist as de:
+    except StatsUser.DoesNotExist as de:
         exist = False
     if not exist:
         add_stats_user(id_user, id_chat)
@@ -240,7 +265,7 @@ def find_chat_meth(id):
     exist = True
     try:
         chat = find_chat(id)
-    except DoesNotExist as de:
+    except Chat.DoesNotExist as de:
         exist = False
     if not exist:
         add_chat(id, '')
@@ -253,43 +278,49 @@ def find_user(id):
     try:
         user = User.select().where(User.id == id).get()
         return (user, True)
-    except DoesNotExist as de:
+    except User.DoesNotExist as de:
         exist = False
     if not exist:
         add_user(id, " ")
         return (User.select().where(User.id == id).get(), False)
 
 
-def update_user_name(id, new_name):
-    user = User.get(User.id == id)
-    user.full_name = new_name
-    user.save()
-
-
-def update_chat(id, new_name):
+def update_chat_name(id, new_name):
     chat = Chat.get(Chat.id == id)
     chat.title = new_name
     chat.save()
 
 
-def update_stats(id, val, type):
-    stats = Stats.get(Stats.id == id)
-    if type == 'msg':
-        stats.count_msgs = val
-    if type == 'stickers':
-        stats.count_stickers = val
-    stats.save()
+def update_chat_count(id, new_val):
+    chat = Chat.get(Chat.id == id)
+    chat.members_count = new_val
+    chat.save()
 
 
-def update_stats_user(id, val, type):
-    stats = StatsUser.get(StatsUser.id == id)
-    if type == 'len':
-        stats.len = val
-    if type == 'date_time_last_msg':
-        stats.date_time_last_msg = val
-    stats.save()
+def get_help():
+    return 'Привет! Слушай, а зачем тебе я? Хорошо, держи ссылку на команды: https://vk.com/wall-183796256_4'
 
 
+def get_delete_dogs():
+    return "Все собачки удалены!"
+
+
+def not_access():
+    return 'Нет доступа:('
+
+
+def get_random(full_name):
+    return full_name + ', вероятность составляет ' + str(randint(0, 100)) + '%!'
+
+
+def get_pred(is_pred, all_pred):
+    return 'Предупреждение, ' + str(is_pred) + '/' + str(all_pred)
+
+
+def get_random_array(msg):
+    msg = msg.replace(msg[:6], '')
+    array = msg.split('или')
+    return 'Я выбираю ' + array[randint(0, len(array) - 1)]
 # print(stats_data)
 # stats_data = []
 # for stat in find_all_stats_by_id_user_and_id_chat(385818590, 1):
