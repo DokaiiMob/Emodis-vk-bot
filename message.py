@@ -38,11 +38,16 @@ class Message():
         self.text = self.text.strip().lower()
         if re.match('работяга', self.text):
             self.text = self.text.replace(self.text[:9], '')
-            if len(self.text) < 2:
-                return False
             return True
-        else:
-            return False
+        if re.match("\[club183796256\|\@emodis\],", self.text):
+            self.text = self.text.replace(self.text[:24], '')
+            self.text = self.text.strip()
+            return True
+        if re.match("\[club183796256\|\@emodis\]", self.text):
+            self.text = self.text.replace(self.text[:23], '')
+            self.text = self.text.strip()
+            return True
+        return False
 
     def parse_users(self):
         users = re.findall(r'\w+\|@?\w+', self.text)

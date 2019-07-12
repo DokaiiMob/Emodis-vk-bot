@@ -41,17 +41,21 @@ while True:
                     # If Emodis come to chat
                     if update['action']['member_id'] == -GROUP_ID:
                         # Getting user data from vk api
-                        chat_users = api.messages.getConversationMembers(
-                            peer_id=update['peer_id'], group_id=GROUP_ID)
+                        try:
+                            chat_users = api.messages.getConversationMembers(
+                                peer_id=update['peer_id'], group_id=GROUP_ID)
+                            for chat_user in chat_users['profiles']:
+                                user = find_user(int(chat_user['id']))
+                                if not user[1]:
+                                    name = api.users.get(
+                                        user_ids=user[0].id)[0]
+                                    user[0].full_name = name['first_name'] + \
+                                        " " + name['last_name']
+                                    user[0].save()
+                        except vk.exceptions.VkAPIError:
+                            print('not access')
                         # Adding user data to database
                         # Here `for` need to parallelize
-                        for chat_user in chat_users['profiles']:
-                            user = find_user(int(chat_user['id']))
-                            if not user[1]:
-                                name = api.users.get(user_ids=user[0].id)[0]
-                                user[0].full_name = name['first_name'] + \
-                                    " " + name['last_name']
-                                user[0].save()
                         # Hello, world^W chat!
                         api.messages.send(peer_id=update['peer_id'],
                                           random_id=randint(-2147483648,
@@ -62,13 +66,16 @@ while True:
                     msg = message.Message(update)
 
                     # Get chat data: chat name and count members
-                    chat_data = api.messages.getConversationsById(
-                        peer_ids=update['peer_id'], group_id=GROUP_ID)
-                    if chat_data['items'][0]:
-                        chat.title = chat_data['items'][0]['chat_settings']['title']
-                        chat.members_count = chat_data['items'][0]['chat_settings']['members_count']
-                        chat.save()
-
+                    try:
+                        chat_data = api.messages.getConversationsById(
+                            peer_ids=update['peer_id'], group_id=GROUP_ID)
+                        if chat_data['items']:
+                            if chat_data['items'][0]:
+                                chat.title = chat_data['items'][0]['chat_settings']['title']
+                                chat.members_count = chat_data['items'][0]['chat_settings']['members_count']
+                                chat.save()
+                    except vk.exceptions.VkAPIError:
+                        print('not access')
                     # Get user data from database
                     user = find_user(int(msg.from_id))
 
@@ -94,26 +101,34 @@ while True:
                     # if settings.parse():
 
                     if msg.parse_bot():
-
                         if re.match('помощь', msg.text):
                             api.messages.send(peer_id=msg.peer_id, random_id=randint(
                                 0, 2147483647), message=get_help())
+                            break
 
                         if re.match('выбери', msg.text):
                             api.messages.send(peer_id=msg.peer_id, random_id=randint(
                                 0, 2147483647), message=get_random_array(msg.text))
+                            break
 
                         if re.match('инфа', msg.text):
                             api.messages.send(peer_id=msg.peer_id, random_id=randint(
                                 0, 2147483647), message=get_random(user.full_name))
+                            break
 
                         #  Is getting from admin name
                         admin_exist = False
-                        chat_users = api.messages.getConversationMembers(peer_id=msg.peer_id, group_id=GROUP_ID)['items']
-                        for chat_user in chat_users:
-                            if user.id == chat_user['member_id'] and chat_user.get('is_admin'):
-                                admin_exist = True
-                                break
+                        try:
+                            chat_users = api.messages.getConversationMembers(
+                                peer_id=msg.peer_id, group_id=GROUP_ID)['items']
+                            for chat_user in chat_users:
+                                if user.id == chat_user['member_id'] and chat_user.get('is_admin'):
+                                    admin_exist = True
+                                    break
+                        except vk.exceptions.VkAPIError:
+                            api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                0, 2147483647), message=not_access())
+
                         if admin_exist:
                             if re.match('установить пред', msg.text):
                                 print("установка пред")
@@ -150,9 +165,12 @@ while True:
                                             api.messages.send(peer_id=msg.peer_id, random_id=randint(
                                                 0, 2147483647), message=not_access())
                                             break
-                                    if dog_exist:
-                                        api.messages.send(peer_id=msg.peer_id, random_id=randint(
-                                            0, 2147483647), message=get_delete_dogs())
+                                if dog_exist:
+                                    api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                        0, 2147483647), message=get_delete_dogs())
+                                else:
+                                    api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                        0, 2147483647), message=get_delete_dogs_not())
 
                             if re.match('бан', msg.text):
                                 # сделать когда участник входит в беседу - выкидывать
@@ -185,7 +203,8 @@ while True:
                                                     api.messages.removeChatUser(
                                                         chat_id=chat.id, member_id=user_data.split('|')[0].split('id')[1])
                                                 else:
-                                                    api.messages.send(peer_id=msg.peer_id, random_id=randint(0, 2147483647), message=get_pred(stats.is_pred, 3))
+                                                    api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                                        0, 2147483647), message=get_pred(stats.is_pred, 3))
 
                                             except vk.exceptions.VkAPIError:
                                                 api.messages.send(peer_id=msg.peer_id, random_id=randint(

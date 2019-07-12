@@ -218,27 +218,38 @@ def find_all_users():
     return User.select()
 
 
-def find_all_stats(id_user, id_chat):
+def find_all_stats(id_user, id_chat, _datetime):
+    try:
+        User.select().where(User.id == int(id_user)).get()
+    except User.DoesNotExist:
+        add_user(id_user, '')
+
     return Stats.select().where(
         Stats.id_user == id_user,
         Stats.id_chat == id_chat,
-        Stats.date_time == datetime.datetime.now().strftime('%Y-%m-%d %H:00:00')
+        Stats.date_time == _datetime
     ).get()
 
 
 def find_stats_user_and_chat(id_user, id_chat):
     exist = True
+    _datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:00:00')
     try:
-        stats = find_all_stats(id_user, id_chat)
-    except Stats.DoesNotExist as de:
+        stats = find_all_stats(id_user, id_chat,_datetime)
+    except Stats.DoesNotExist:
         exist = False
     if not exist:
         add_stats(id_user, id_chat)
-        stats = find_all_stats(id_user, id_chat)
+        stats = find_all_stats(id_user, id_chat,_datetime)
     return stats
 
 
 def find_all_stats_user(id_user, id_chat):
+    try:
+        User.select().where(User.id == int(id_user)).get()
+    except User.DoesNotExist:
+        add_user(id_user, '')
+
     return StatsUser.select().where(
         StatsUser.id_user == id_user,
         StatsUser.id_chat == id_chat
@@ -249,7 +260,7 @@ def find_stats_addit_user_and_chat(id_user, id_chat):
     exist = True
     try:
         stats = find_all_stats_user(id_user, id_chat)
-    except StatsUser.DoesNotExist as de:
+    except StatsUser.DoesNotExist:
         exist = False
     if not exist:
         add_stats_user(id_user, id_chat)
@@ -265,7 +276,7 @@ def find_chat_meth(id):
     exist = True
     try:
         chat = find_chat(id)
-    except Chat.DoesNotExist as de:
+    except Chat.DoesNotExist:
         exist = False
     if not exist:
         add_chat(id, '')
@@ -299,6 +310,10 @@ def update_chat_count(id, new_val):
 
 def get_help():
     return 'Привет! Слушай, а зачем тебе я? Хорошо, держи ссылку на команды: https://vk.com/wall-183796256_4'
+
+
+def get_delete_dogs_not():
+    return "Собачек нет!"
 
 
 def get_delete_dogs():
