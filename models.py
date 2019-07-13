@@ -145,7 +145,7 @@ def add_user(id, full_name):
     row.save(force_insert=True)
 
 
-def add_stats(user_id, chat_id):
+def add_stats(user_id, chat_id, _datetime):
     user_exist = chat_exist = True
 
     try:
@@ -162,6 +162,7 @@ def add_stats(user_id, chat_id):
         row = Stats(
             id_user=user,
             id_chat=chat,
+            date_time=_datetime
         )
         row.save(force_insert=True)
 
@@ -239,7 +240,7 @@ def find_stats_user_and_chat(id_user, id_chat):
     except Stats.DoesNotExist:
         exist = False
     if not exist:
-        add_stats(id_user, id_chat)
+        add_stats(id_user, id_chat,_datetime)
         stats = find_all_stats(id_user, id_chat,_datetime)
     return stats
 
