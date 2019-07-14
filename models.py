@@ -6,6 +6,38 @@ from peewee import *
 from random import randint
 import datetime
 import peewee
+import re
+
+
+def parse_attachments(attachments):
+    if len(attachments) > 0:
+        str = ''
+        for attach in attachments:
+            str += attach['type'] + " "
+        return str
+    return ''
+
+
+def parse_bot(text):
+    text = text.strip()
+    if re.match('работяга', text.lower()):
+        text = text.replace(text[:9], '')
+        return True, text
+    if re.match("\[club183796256\|\@emodis\],", text.lower()):
+        text = text.replace(text[:24], '')
+        text = text.strip()
+        return True, text
+    if re.match("\[club183796256\|\@emodis\]", text.lower()):
+        text = text.replace(text[:23], '')
+        text = text.strip()
+        return True, text
+    return False, text
+
+def parse_users(self):
+    users = re.findall(r'\w+\|@?\w+', self.text)
+    if not users:
+        return False
+    return users
 
 
 class DataBase():
@@ -150,12 +182,12 @@ def add_stats(user_id, chat_id, _datetime):
 
     try:
         user = User.select().where(User.id == int(user_id)).get()
-    except DoesNotExist as de:
+    except DoesNotExist:
         user_exist = False
 
     try:
         chat = Chat.select().where(Chat.id == int(chat_id)).get()
-    except DoesNotExist as de:
+    except DoesNotExist:
         chat_exist = False
 
     if user_exist and chat_exist:
@@ -172,12 +204,12 @@ def add_stats_user(user_id, chat_id):
 
     try:
         user = User.select().where(User.id == int(user_id)).get()
-    except User.DoesNotExist as de:
+    except User.DoesNotExist:
         user_exist = False
 
     try:
         chat = Chat.select().where(Chat.id == int(chat_id)).get()
-    except Chat.DoesNotExist as de:
+    except Chat.DoesNotExist:
         chat_exist = False
 
     if user_exist and chat_exist:
@@ -193,12 +225,12 @@ def add_text(user_id, chat_id, msg, attach):
 
     try:
         user = User.select().where(User.id == int(user_id)).get()
-    except User.DoesNotExist as de:
+    except User.DoesNotExist:
         user_exist = False
 
     try:
         chat = Chat.select().where(Chat.id == int(chat_id)).get()
-    except Chat.DoesNotExist as de:
+    except Chat.DoesNotExist:
         chat_exist = False
 
     if user_exist and chat_exist:
@@ -236,12 +268,12 @@ def find_stats_user_and_chat(id_user, id_chat):
     exist = True
     _datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:00:00')
     try:
-        stats = find_all_stats(id_user, id_chat,_datetime)
+        stats = find_all_stats(id_user, id_chat, _datetime)
     except Stats.DoesNotExist:
         exist = False
     if not exist:
-        add_stats(id_user, id_chat,_datetime)
-        stats = find_all_stats(id_user, id_chat,_datetime)
+        add_stats(id_user, id_chat, _datetime)
+        stats = find_all_stats(id_user, id_chat, _datetime)
     return stats
 
 
@@ -290,7 +322,7 @@ def find_user(id):
     try:
         user = User.select().where(User.id == id).get()
         return (user, True)
-    except User.DoesNotExist as de:
+    except User.DoesNotExist:
         exist = False
     if not exist:
         add_user(id, " ")
@@ -337,26 +369,13 @@ def get_random_array(msg):
     msg = msg.replace(msg[:6], '')
     array = msg.split('или')
     return 'Я выбираю ' + array[randint(0, len(array) - 1)]
-# print(stats_data)
-# stats_data = []
-# for stat in find_all_stats_by_id_user_and_id_chat(385818590, 1):
-#     stats_data.append({
-#         'id_user': stat.id_user,
-#         'id_chat': stat.id_chat,
-#         'date_time': stat.date_time,
-#         'count_msgs': stat.count_msgs,
-#     })
-# # add_stats_user(385818590, 1)
-# stats_data = []
-# for stat in find_all_stats_user_by_id_user_and_id_chat(385818590, 1):
-#     stats_data.append({
-#         'id_user': stat.id_user,
-#         'id_chat': stat.id_chat,
-#         'date_time_last_msg': stat.date_time_last_msg,
-#     })
 
 
-# add_chat(12, 'None')
-# add_user(12, '')
-# add_stats(385818590, 1)
-# update_user(385818590, 'Kindle Books')
+def find_all_users_by_msg(chat_id):
+    # print(StatsUser.select(StatsUser, User).join(User).where(
+    #     StatsUser.id_chat == chat_id
+    # ).order_by(StatsUser.len.desc()).limit(10))
+
+    return StatsUser.select(StatsUser, User).join(User).where(
+        StatsUser.id_chat == chat_id
+    ).order_by(StatsUser.len.desc()).limit(10)

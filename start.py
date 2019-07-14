@@ -8,7 +8,6 @@ from models import *
 from config import *
 import vk
 import re
-import message
 
 
 session = vk.Session(access_token=VK_API_ACCESS_TOKEN)
@@ -24,11 +23,11 @@ while True:
                                          'wait': 25}).json()
 
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
+        print(longPoll)
         db.open_connection()
         # Here `for` need to parallelize:
         for update in longPoll['updates']:
             exist = False
-            print(update)
             if update['type'] == 'message_new':
 
                 update = update['object']
@@ -63,7 +62,9 @@ while True:
                                           message='Привет, %s &#128521; Рекомендуем администратору беседы зайти на сайт' % update['peer_id'])
                 else:
                     # Create Message object
-                    msg = message.Message(update)
+                    text = update['text']
+                    peer_id = update['peer_id']
+                    attachments = update['attachments']
 
                     # Get chat data: chat name and count members
                     try:
@@ -76,10 +77,11 @@ while True:
                                 chat.save()
                     except vk.exceptions.VkAPIError:
                         print('not access')
-                    # Get user data from database
-                    user = find_user(int(msg.from_id))
 
-                    if not user[1]:
+                    # Get user data from database
+                    user = find_user(int(update['from_id']))
+
+                    if not user[1] and user[0].id > 0:
                         name = api.users.get(user_ids=user[0].id)[0]
                         user[0].full_name = name['first_name'] + \
                             " " + name['last_name']
@@ -93,48 +95,63 @@ while True:
                     stats.save()
 
                     stats = find_stats_addit_user_and_chat(user.id, chat.id)
-                    stats.len = stats.len + len(msg.text)
+                    stats.len = stats.len + len(text)
                     stats.save()
 
-                    add_text(user.id, chat.id, msg.text, msg.attachments)
+                    add_text(user.id, chat.id, text, attachments)
 
                     # if settings.parse():
+                    handler = parse_bot(text)
+                    if handler[0]:
+                        text = handler[1]
+                        if re.match('топ', text) and not exist:
+                            stats_msg = ''
+                            index = 1
+                            for s in find_all_users_by_msg(chat.id):
+                                name = api.users.get(user_ids=s.id_user)[0]
+                                stats_msg += str(index) + ' ' + \
+                                    name['first_name'] + " " + \
+                                    name['last_name'] + ' ' + str(s.len) + '\n'
+                                index = index + 1
+                            # print(stats_msg)
+                            api.messages.send(peer_id=peer_id, random_id=randint(
+                                0, 2147483647), message=stats_msg)
+                            exist = True
 
-                    if msg.parse_bot():
-                        if re.match('помощь', msg.text):
-                            api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                        if re.match('помощь', text) and not exist:
+                            api.messages.send(peer_id=peer_id, random_id=randint(
                                 0, 2147483647), message=get_help())
-                            break
+                            exist = True
 
-                        if re.match('выбери', msg.text):
-                            api.messages.send(peer_id=msg.peer_id, random_id=randint(
-                                0, 2147483647), message=get_random_array(msg.text))
-                            break
+                        if re.match('выбери', text) and not exist:
+                            api.messages.send(peer_id=peer_id, random_id=randint(
+                                0, 2147483647), message=get_random_array(text))
+                            exist = True
 
-                        if re.match('инфа', msg.text):
-                            api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                        if re.match('инфа', text) and not exist:
+                            api.messages.send(peer_id=peer_id, random_id=randint(
                                 0, 2147483647), message=get_random(user.full_name))
-                            break
+                            exist = True
 
                         #  Is getting from admin name
                         admin_exist = False
                         try:
                             chat_users = api.messages.getConversationMembers(
-                                peer_id=msg.peer_id, group_id=GROUP_ID)['items']
+                                peer_id=peer_id, group_id=GROUP_ID)['items']
                             for chat_user in chat_users:
                                 if user.id == chat_user['member_id'] and chat_user.get('is_admin'):
                                     admin_exist = True
                                     break
                         except vk.exceptions.VkAPIError:
-                            api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                            api.messages.send(peer_id=peer_id, random_id=randint(
                                 0, 2147483647), message=not_access())
 
-                        if admin_exist:
-                            if re.match('установить пред', msg.text):
+                        if admin_exist and not exist:
+                            if re.match('установить пред', text):
                                 print("установка пред")
 
-                            if re.match('снять пред', msg.text):
-                                users = msg.parse_users()
+                            if re.match('снять пред', text):
+                                users = parse_users(text)
                                 if users:
                                     for user_data in users:
                                         if re.match('id', user_data.split('|')[0]):
@@ -143,8 +160,8 @@ while True:
                                             stats.is_pred = 0
                                             stats.save()
 
-                            if re.match('снять бан', msg.text):
-                                users = msg.parse_users()
+                            if re.match('снять бан', text):
+                                users = parse_users(text)
                                 if users:
                                     for user_data in users:
                                         if re.match('id', user_data.split('|')[0]):
@@ -153,8 +170,8 @@ while True:
                                             stats.is_banned = 0
                                             stats.save()
 
-                            if re.match('исключить собачек', msg.text):
-                                for chat_user in api.messages.getConversationMembers(peer_id=msg.peer_id, group_id=GROUP_ID)['profiles']:
+                            if re.match('исключить собачек', text):
+                                for chat_user in api.messages.getConversationMembers(peer_id=peer_id, group_id=GROUP_ID)['profiles']:
                                     dog_exist = False
                                     if chat_user.get('deactivated'):
                                         try:
@@ -162,19 +179,19 @@ while True:
                                                 chat_id=chat.id, member_id=chat_user['id'])
                                             dog_exist = True
                                         except vk.exceptions.VkAPIError:
-                                            api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                            api.messages.send(peer_id=peer_id, random_id=randint(
                                                 0, 2147483647), message=not_access())
                                             break
                                 if dog_exist:
-                                    api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                    api.messages.send(peer_id=peer_id, random_id=randint(
                                         0, 2147483647), message=get_delete_dogs())
                                 else:
-                                    api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                    api.messages.send(peer_id=peer_id, random_id=randint(
                                         0, 2147483647), message=get_delete_dogs_not())
 
-                            if re.match('бан', msg.text):
+                            if re.match('бан', text):
                                 # сделать когда участник входит в беседу - выкидывать
-                                users = msg.parse_users()
+                                users = parse_users(text)
                                 if users:
                                     for user_data in users:
                                         if re.match('id', user_data.split('|')[0]):
@@ -186,11 +203,11 @@ while True:
                                                 stats.is_banned = 1
                                                 stats.save()
                                             except vk.exceptions.VkAPIError:
-                                                api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                                api.messages.send(peer_id=peer_id, random_id=randint(
                                                     0, 2147483647), message=not_access())
 
-                            if re.match('пред', msg.text):
-                                users = msg.parse_users()
+                            if re.match('пред', text):
+                                users = parse_users(text)
                                 if users:
                                     for user_data in users:
                                         if re.match('id', user_data.split('|')[0]):
@@ -203,15 +220,15 @@ while True:
                                                     api.messages.removeChatUser(
                                                         chat_id=chat.id, member_id=user_data.split('|')[0].split('id')[1])
                                                 else:
-                                                    api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                                    api.messages.send(peer_id=peer_id, random_id=randint(
                                                         0, 2147483647), message=get_pred(stats.is_pred, 3))
 
                                             except vk.exceptions.VkAPIError:
-                                                api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                                api.messages.send(peer_id=peer_id, random_id=randint(
                                                     0, 2147483647), message=not_access())
 
-                            if re.match('кик', msg.text):
-                                users = msg.parse_users()
+                            if re.match('кик', text):
+                                users = parse_users(text)
                                 if users:
                                     for user_data in users:
                                         if re.match('id', user_data.split('|')[0]):
@@ -219,8 +236,10 @@ while True:
                                                 api.messages.removeChatUser(
                                                     chat_id=chat.id, member_id=user_data.split('|')[0].split('id')[1])
                                             except vk.exceptions.VkAPIError:
-                                                api.messages.send(peer_id=msg.peer_id, random_id=randint(
+                                                api.messages.send(peer_id=peer_id, random_id=randint(
                                                     0, 2147483647), message=not_access())
         db.close_connection()
-    if longPoll['ts']:
+    try:
         ts = longPoll['ts']
+    except KeyError as e:
+        print('I got a KeyError - reason "%s"' % str(e))
