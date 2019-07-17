@@ -9,37 +9,6 @@ import peewee
 import re
 
 
-def parse_attachments(attachments):
-    if len(attachments) > 0:
-        str = ''
-        for attach in attachments:
-            str += attach['type'] + " "
-        return str
-    return ''
-
-
-def parse_bot(text):
-    text = text.strip()
-    if re.match('работяга', text.lower()):
-        text = text.replace(text[:9], '')
-        return True, text
-    if re.match("\[club183796256\|\@emodis\],", text.lower()):
-        text = text.replace(text[:24], '')
-        text = text.strip()
-        return True, text
-    if re.match("\[club183796256\|\@emodis\]", text.lower()):
-        text = text.replace(text[:23], '')
-        text = text.strip()
-        return True, text
-    return False, text
-
-def parse_users(self):
-    users = re.findall(r'\w+\|@?\w+', self.text)
-    if not users:
-        return False
-    return users
-
-
 class DataBase():
     dbhandle = MySQLDatabase(
         DB_NAME, user=DB_USER,
@@ -321,12 +290,12 @@ def find_user(id):
     exist = True
     try:
         user = User.select().where(User.id == id).get()
-        return (user, True)
+        return user
     except User.DoesNotExist:
         exist = False
     if not exist:
         add_user(id, " ")
-        return (User.select().where(User.id == id).get(), False)
+        return User.select().where(User.id == id).get()
 
 
 def update_chat_name(id, new_name):
@@ -339,6 +308,16 @@ def update_chat_count(id, new_val):
     chat = Chat.get(Chat.id == id)
     chat.members_count = new_val
     chat.save()
+
+
+def find_all_users_by_msg(chat_id):
+    return StatsUser.select(StatsUser, User).join(User).where(
+        StatsUser.id_chat == chat_id
+    ).order_by(StatsUser.len.desc()).limit(10)
+
+
+def get_hello(id):
+    return 'Привет, %s &#128521; Рекомендуем администратору беседы зайти на сайт' % id
 
 
 def get_help():
@@ -357,25 +336,15 @@ def not_access():
     return 'Нет доступа:('
 
 
-def get_random(full_name):
-    return full_name + ', вероятность составляет ' + str(randint(0, 100)) + '%!'
+def get_random():
+    return "Вероятность составляет {0}%".format(randint(0, 100))
 
 
 def get_pred(is_pred, all_pred):
-    return 'Предупреждение, ' + str(is_pred) + '/' + str(all_pred)
+    return "Предупреждение {0}/{1}".format(is_pred, all_pred)
 
 
 def get_random_array(msg):
     msg = msg.replace(msg[:6], '')
     array = msg.split('или')
-    return 'Я выбираю ' + array[randint(0, len(array) - 1)]
-
-
-def find_all_users_by_msg(chat_id):
-    # print(StatsUser.select(StatsUser, User).join(User).where(
-    #     StatsUser.id_chat == chat_id
-    # ).order_by(StatsUser.len.desc()).limit(10))
-
-    return StatsUser.select(StatsUser, User).join(User).where(
-        StatsUser.id_chat == chat_id
-    ).order_by(StatsUser.len.desc()).limit(10)
+    return "Я выбираю {0}".format(array[randint(0, len(array) - 1)])
