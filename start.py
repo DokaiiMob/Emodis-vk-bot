@@ -35,7 +35,7 @@ while True:
             if update['type'] != 'message_new':
                 continue
             update = update['object']
-            print(update)
+            # print(update)
 
             ch.peer_id = update['peer_id']
 
