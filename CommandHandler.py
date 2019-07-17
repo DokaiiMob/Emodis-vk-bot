@@ -5,10 +5,13 @@ from random import randint
 import re
 import vk
 from config import GROUP_ID
-from models import *
+from models import get_pred, get_hello, find_user, not_access, find_all_users_by_msg, get_help, get_random, find_stats_addit_user_and_chat, get_delete_dogs_not, get_delete_dogs
 
 
 class CommandHandler:
+    chat_id = 0
+    peer_id = 0
+    user_id = 0
 
     def __init__(self, api):
         self.api = api
@@ -16,42 +19,46 @@ class CommandHandler:
     def set_peer_id(self, peer_id):
         self.peer_id = peer_id
 
-    def is_chat_invite_user(self, member_id, peer_id):
+    def find_update_user(self, member_id):
+        user = find_user(member_id)
+        if len(user.full_name) == 0:
+            user.full_name = self.api_full_name(user.id)
+            user.save()
+
+    def is_chat_invite_user(self, member_id):
         if member_id > 0:
-            user = find_user(member_id)
-            if len(user.full_name) == 0:
-                user.full_name = ch.api_full_name(user.id)
-                user.save()
+            self.find_update_user(member_id)
+            stats = find_stats_addit_user_and_chat(member_id, self.chat_id)
+            if stats.is_banned == 1:
+                self.remove_chat_user(member_id)
+
         if member_id < 0:
             print("Here adding to chat another bot")
         if member_id == -GROUP_ID:
             try:
-                for chat_user in self.getConversationMembers(peer_id):
-                    user = find_user(chat_user['from_id'])
-                    if len(user.full_name) == 0:
-                        user.full_name = self.api_full_name(user.id)
-                        user.save()
+                for chat_user in self.getConversationMembers():
+                    self.find_update_user(chat_user['from_id'])
             except vk.exceptions.VkAPIError:
-                self.send_msg(msg=get_hello(peer_id))
+                self.send_msg(msg=get_hello(self.peer_id))
 
     def api_full_name(self, user_id):
         name = self.api.users.get(user_ids=user_id)[0]
-        return '%s %s', name['first_name'], name['last_name']
+        return "{0} {1}".format(name['first_name'], name['last_name'])
 
     def send_msg(self, msg):
         self.api.messages.send(peer_id=self.peer_id, random_id=randint(
-            0, 2147483647), message=msg)
+            -2147483647, 2147483647), message=msg)
 
-    def getConversationsById(self, peer_id):
+    def getConversationsById(self):
         chat_data = self.api.messages.getConversationsById(
-            peer_ids=peer_id, group_id=GROUP_ID)
+            peer_ids=self.peer_id, group_id=GROUP_ID)
         if chat_data['items']:
             if chat_data['items'][0]:
-                return chat_data['items'][0]['chat_settings']['title'], chat_data['items'][0]['chat_settings']['members_count']
+                return chat_data['items'][0]['chat_settings']
         return False
 
-    def getConversationMembers(self, peer_id):
-        return self.api.messages.getConversationMembers(peer_id=peer_id, group_id=GROUP_ID)['profiles']
+    def getConversationMembers(self):
+        return self.api.messages.getConversationMembers(peer_id=self.peer_id, group_id=GROUP_ID)['profiles']
 
     def parse_attachments(self, attachments):
         if len(attachments) > 0:
@@ -87,8 +94,8 @@ class CommandHandler:
         index = 1
         for s in find_all_users_by_msg(self.chat_id):
             name = self.api.users.get(user_ids=s.id_user)[0]
-            msg += '№%s %s %s %s\n' % str(
-                index),  name['first_name'], name['last_name'], str(s.len)
+            msg += "#{0} {1} {2} {3}\n".format(index,
+                                                name['first_name'], name['last_name'], s.len)
             index = index + 1
         self.send_msg(msg)
 
@@ -96,63 +103,70 @@ class CommandHandler:
         self.send_msg(msg=get_help())
 
     def get_choise(self, text):
-        self.send_msg(msg=get_random_array(text))
+        msg = text.replace(text[:6], '')
+        array = msg.split('или')
+        self.send_msg(msg="Я выбираю {0}".format(
+            array[randint(0, len(array) - 1)]))
 
     def get_inform(self):
         self.send_msg(msg=get_random())
 
-    def get_pred(self, users):
-        for user in users:
-            if re.match('id', user.split('|')[0]):
-                try:
-                    stats = find_stats_addit_user_and_chat(
-                        user.split('|')[0].split('id')[1], self.chat_id)
-                    stats.is_pred = stats.is_pred + 1
-                    stats.save()
-                    if stats.is_pred == 3:
-                        self.api.messages.removeChatUser(
-                            chat_id=self.chat_id, member_id=user.split('|')[0].split('id')[1])
-                    else:
-                        self.send_msg(msg=get_pred(stats.is_pred, 3))
-                except vk.exceptions.VkAPIError:
-                    self.send_msg(msg=not_access())
+    def remove_chat_user(self, id):
+        try:
+            self.api.messages.removeChatUser(
+                chat_id=self.chat_id, member_id=id)
+            return True
+        except vk.exceptions.VkAPIError:
+            self.send_msg(msg=not_access())
+            return False
 
-    def get_kick(self, users):
+    def pred(self, users):
         for user in users:
             if re.match('id', user.split('|')[0]):
-                try:
-                    self.api.messages.removeChatUser(
-                        chat_id=self.chat_id, member_id=user.split('|')[0].split('id')[1])
-                except vk.exceptions.VkAPIError:
-                    self.send_msg(msg=not_access())
+                id = user.split('|')[0].split('id')[1]
+                stats = find_stats_addit_user_and_chat(id, self.chat_id)
+                stats.is_pred = stats.is_pred + 1
+                stats.save()
 
-    def get_ban(self, users):
-        # сделать когда участник входит в беседу - выкидывать
+                if stats.is_pred == 3:
+                    # По сути надо выбирать что делать роботу
+                    # stats.is_banned = 1
+                    # stats.is_pred = 0
+                    # self.send_msg(msg="Лимит предупреждений! Кик :-)")
+                    # И парсить максимальное кол-во
+                    self.remove_chat_user(id)
+                self.send_msg(msg=get_pred(stats.is_pred, 3))
+
+    def kick(self, users):
         for user in users:
             if re.match('id', user.split('|')[0]):
-                try:
-                    self.api.messages.removeChatUser(
-                        chat_id=self.chat_id, member_id=user.split('|')[0].split('id')[1])
-                    stats = find_stats_addit_user_and_chat(
-                        user.split('|')[0].split('id')[1], self.chat_id)
+                self.remove_chat_user(user.split('|')[0].split('id')[1])
+
+    def ban(self, users):
+        for user in users:
+            if re.match('id', user.split('|')[0]):
+                id = user.split('|')[0].split('id')[1]
+                stats = find_stats_addit_user_and_chat(id, self.chat_id)
+                if self.remove_chat_user(id):
                     stats.is_banned = 1
-                    stats.save()
-                except vk.exceptions.VkAPIError:
-                    self.send_msg(msg=not_access())
+                else:
+                    stats.is_banned = 0
+                stats.save()
 
     def ban_off(self, users):
         for user in users:
             if re.match('id', user.split('|')[0]):
-                stats = find_stats_addit_user_and_chat(
-                    user.split('|')[0].split('id')[1], self.chat_id)
+                id = user.split('|')[0].split('id')[1]
+                stats = find_stats_addit_user_and_chat(id, self.chat_id)
                 stats.is_banned = 0
+                stats.is_pred = 0
                 stats.save()
 
     def pred_off(self, users):
         for user in users:
             if re.match('id', user.split('|')[0]):
-                stats = find_stats_addit_user_and_chat(
-                    user.split('|')[0].split('id')[1], self.chat_id)
+                id = user.split('|')[0].split('id')[1]
+                stats = find_stats_addit_user_and_chat(id, self.chat_id)
                 stats.is_pred = 0
                 stats.save()
 
@@ -160,17 +174,12 @@ class CommandHandler:
         for chat_user in self.api.messages.getConversationMembers(peer_id=self.peer_id, group_id=GROUP_ID)['profiles']:
             dog_exist = False
             if chat_user.get('deactivated'):
-                try:
-                    self.api.messages.removeChatUser(
-                        chat_id=self.chat_id, member_id=chat_user['id'])
+                if self.remove_chat_user(chat_user['id']):
                     dog_exist = True
-                except vk.exceptions.VkAPIError:
-                    self.send_msg(msg=not_access())
-                    break
         if not dog_exist:
-            self.send_msg(msg=get_delete_dogs())
-        else:
             self.send_msg(msg=get_delete_dogs_not())
+        else:
+            self.send_msg(msg=get_delete_dogs())
 
     def is_admin(self):
         try:
@@ -184,10 +193,8 @@ class CommandHandler:
             return False
         return False
 
-    def parse_command(self, peer_id, text, user_id, chat_id):
+    def parse_command(self, text, user_id):
 
-        self.peer_id = peer_id
-        self.chat_id = chat_id
         self.user_id = user_id
 
         if re.match('топ', text):
@@ -204,6 +211,22 @@ class CommandHandler:
 
         if re.match('инфа', text):
             self.get_inform()
+            return True
+
+        if re.match('преды', text):
+            # self.get_inform()
+            return True
+
+        if re.match('баны', text):
+            # self.get_inform()
+            return True
+
+        if re.match('браки', text):
+            # self.get_inform()
+            return True
+
+        if re.match('баны', text):
+            # self.get_inform()
             return True
 
         if self.is_admin():
@@ -231,17 +254,17 @@ class CommandHandler:
             if re.match('бан', text):
                 users = self.parse_users(text)
                 if users:
-                    self.get_ban(users)
+                    self.ban(users)
                 return True
 
             if re.match('пред', text):
                 users = self.parse_users(text)
                 if users:
-                    self.get_pred(users)
+                    self.pred(users)
                 return True
 
             if re.match('кик', text):
                 users = self.parse_users(text)
                 if users:
-                    self.get_kick(users)
+                    self.kick(users)
                 return True

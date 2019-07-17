@@ -248,7 +248,7 @@ def find_stats_user_and_chat(id_user, id_chat):
 
 def find_all_stats_user(id_user, id_chat):
     try:
-        User.select().where(User.id == int(id_user)).get()
+        User.select().where(User.id == id_user).get()
     except User.DoesNotExist:
         add_user(id_user, '')
 
@@ -321,7 +321,7 @@ def get_hello(id):
 
 
 def get_help():
-    return 'Привет! Слушай, а зачем тебе я? Хорошо, держи ссылку на команды: https://vk.com/wall-183796256_4'
+    return 'Привет! Держи ссылку на команды: https://vk.com/wall-183796256_4'
 
 
 def get_delete_dogs_not():
@@ -342,9 +342,3 @@ def get_random():
 
 def get_pred(is_pred, all_pred):
     return "Предупреждение {0}/{1}".format(is_pred, all_pred)
-
-
-def get_random_array(msg):
-    msg = msg.replace(msg[:6], '')
-    array = msg.split('или')
-    return "Я выбираю {0}".format(array[randint(0, len(array) - 1)])

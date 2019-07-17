@@ -27,7 +27,7 @@ while True:
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
         try:
             db.open_connection()
-        except (IntegrityError, OperationalError) as e:
+        except (IntegrityError, OperationalError):
             db = DataBase()
             db.open_connection()
         # Here `for` need to parallelize:
@@ -37,16 +37,24 @@ while True:
             update = update['object']
             print(update)
 
+            ch.peer_id = update['peer_id']
+
             chat = find_chat_meth(int(update['peer_id'] - 2000000000))
-            peer_id = update['peer_id']
+            ch.chat_id = chat.id
+            try:
+                chat_data = ch.getConversationsById()
+                if chat_data:
+                    chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
+                    chat.save()
+            except vk.exceptions.VkAPIError:
+                print('not access')
 
             if update.get('action'):
                 if update['action']['type'] == 'chat_invite_user':
                     ch.is_chat_invite_user(
-                        update['action']['member_id'], peer_id)
+                        update['action']['member_id'])
                 if update['action']['type'] == 'chat_invite_user_by_link':
-                    ch.is_chat_invite_user(
-                        update['action']['member_id'], peer_id)
+                    ch.is_chat_invite_user(update['from_id'])
                 if update['action']['type'] == 'chat_title_update':
                     print("chat title")
                 if update['action']['type'] == 'chat_kick_user':
@@ -55,14 +63,6 @@ while True:
             # Create Message object
             text = update['text']
             attachments = update['attachments']
-            # Get chat data: chat name and count members
-            try:
-                chat_data = ch.getConversationsById(peer_id)
-                if chat_data:
-                    chat.title, chat.members_count = chat_data[0], chat_data[1]
-                    chat.save()
-            except vk.exceptions.VkAPIError:
-                print('not access')
 
             # Get user data from database
             user = find_user(update['from_id'])
@@ -82,11 +82,11 @@ while True:
             add_text(user.id, chat.id, text, attachments)
 
             # if settings.parse():
-            
+
             handler = ch.parse_bot(text)
             if handler[0]:
                 text = handler[1]
-                ch.parse_command(peer_id, text, user.id, chat.id)
+                ch.parse_command(text, user.id)
         db.close_connection()
 
     if longPoll.get('ts') and len(longPoll['ts']) != 0:
