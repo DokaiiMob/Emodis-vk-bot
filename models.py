@@ -50,7 +50,8 @@ class Chat(BaseModel):
 
 class TypeSet(BaseModel):
     id = PrimaryKeyField(null=False)
-    title = CharField(max_length=255)
+    title = TextField()
+    default_val = TextField()
 
     class Meta:
         db_table = "type_set"
@@ -119,7 +120,7 @@ class Texts(BaseModel):
 
 class Settings(BaseModel):
     id = PrimaryKeyField(null=False)
-    id_type = ForeignKeyField(User, db_column='id_type', related_name='fk_type',
+    id_type = ForeignKeyField(TypeSet, db_column='id_type', related_name='fk_type',
                               to_field='id', on_delete='cascade', on_update='cascade')
     id_chat = ForeignKeyField(Chat, db_column='id_chat', related_name='fk_chat',
                               to_field='id', on_delete='cascade', on_update='cascade')
@@ -166,6 +167,24 @@ def add_stats(user_id, chat_id, _datetime):
             date_time=_datetime
         )
         row.save(force_insert=True)
+
+
+def add_set_default(chat_id, type_id, val):
+    chat_exist = True
+
+    try:
+        chat = Chat.select().where(Chat.id == int(chat_id)).get()
+    except DoesNotExist:
+        chat_exist = False
+
+    _type = TypeSet.select().where(TypeSet.id == int(type_id)).get()
+    if chat_exist:
+        row = Settings(
+            id_type=_type,
+            id_chat=chat,
+            val=_type.default_val
+        )
+    row.save(force_insert=True)
 
 
 def add_stats_user(user_id, chat_id):
@@ -218,6 +237,34 @@ def find_all_chats():
 
 def find_all_users():
     return User.select()
+
+
+def find_all_type_set():
+    types = []
+    for _type in TypeSet.select():
+        types.append({
+            'id': _type.id,
+            'val': '',
+            'default_val': _type.default_val,
+        })
+    return types
+
+
+def get_null_settings(id_chat):
+    null_settings = []
+    for s in TypeSet.select(TypeSet.id, TypeSet.default_val, Settings.val.alias('title')).join(Settings, JOIN.LEFT_OUTER, Settings.id_type == TypeSet.id).where(TypeSet.id.not_in(Settings.select(Settings.id_type).where(Settings.id_chat == id_chat))):
+        null_settings.append({
+            'id': s.id,
+            'default_val': s.default_val
+        })
+    return null_settings
+
+
+def find_all_settings(id_chat):
+    for null_settigs in get_null_settings(id_chat):
+        add_set_default(id_chat, null_settigs.get('id'),
+                        null_settigs.get('default_val'))
+    return Settings.select().where(Settings.id_chat == id_chat)
 
 
 def find_all_stats(id_user, id_chat, _datetime):
