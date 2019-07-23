@@ -55,13 +55,13 @@ while True:
             block_mat = False
             for settings in find_all_settings(chat.id):
                 id_type = int(settings.id_type.id)
-                if id_type == 1 and settings.val == 0:
+                if id_type == 1 and int(settings.val) == 0:
                     bot_on = False
-                block_url_chat = id_type == 2 and settings.val == 1
-                block_mat = id_type == 4 and settings.val == 1
+                block_url_chat = id_type == 2 and int(settings.val) == 1
+                block_mat = id_type == 4 and int(settings.val) == 1
                 if id_type == 3:
-                    ch.max_pred = settings.val
-
+                    ch.max_pred = int(settings.val)
+            
             if update.get('action'):
                 if update['action']['type'] == 'chat_invite_user':
                     ch.is_chat_invite_user(
@@ -71,7 +71,7 @@ while True:
                 if update['action']['type'] == 'chat_title_update':
                     print("chat title")
                 if update['action']['type'] == 'chat_kick_user':
-                    print("kick_user")
+                    print("kick_user or user_exit")
                 continue
 
             # Create Message object
@@ -85,6 +85,7 @@ while True:
                 user.save()
 
             print(user.id)
+            ch.user_id = user.id
             print(chat.id)
 
             stats = find_stats_user_and_chat(user.id, chat.id)
@@ -98,7 +99,6 @@ while True:
             add_text(user.id, chat.id, text, attachments)
 
             if block_mat and ch.check_slang(text):
-                print('2print')
                 ch.give_pred_by_id(user.id, "Мат в чате.")
 
             if bot_on:

@@ -5,7 +5,7 @@ from random import randint
 import re
 import vk
 from config import GROUP_ID
-from models import get_pred, get_hello, find_user, not_access, find_all_users_by_msg, get_help, get_random, find_stats_addit_user_and_chat, get_delete_dogs_not, get_delete_dogs
+from models import get_pred, get_hello, find_user, not_access, find_all_users_by_msg, get_help, get_random, find_stats_addit_user_and_chat, get_delete_dogs_not, get_delete_dogs, get_preds_db, get_bans_db, settings_set
 import locale
 
 
@@ -122,6 +122,36 @@ class CommandHandler:
     def get_inform(self):
         self.send_msg(msg=get_random())
 
+    def get_preds(self):
+        exist = False
+        msg = 'Все предупреждения:\n'
+        index = 1
+        for p in get_preds_db(self.chat_id, self.user_id):
+            exist = True
+            name = self.api.users.get(user_ids=p.id_user)[0]
+            msg += "#{0} {1} {2} {3}\n".format(index,
+                                               name['first_name'], name['last_name'], p.is_pred)
+            index = index + 1
+        if exist:
+            self.send_msg(msg=msg)
+        else:
+            self.send_msg(msg="Предупреждений в чате нет")
+
+    def get_bans(self):
+        msg = 'Все блокировки:\n'
+        index = 1
+        exist = False
+        for p in get_bans_db(self.chat_id, self.user_id):
+            exist = True
+            name = self.api.users.get(user_ids=p.id_user)[0]
+            msg += "#{0} {1} {2}\n".format(index,
+                                           name['first_name'], name['last_name'])
+            index = index + 1
+        if exist:
+            self.send_msg(msg=msg)
+        else:
+            self.send_msg(msg="Блокировок в чате нет")
+
     def remove_chat_user(self, id):
         try:
             self.api.messages.removeChatUser(
@@ -171,10 +201,7 @@ class CommandHandler:
             if re.match('id', user.split('|')[0]):
                 id = user.split('|')[0].split('id')[1]
                 stats = find_stats_addit_user_and_chat(id, self.chat_id)
-                if self.remove_chat_user(id):
-                    stats.is_banned = 1
-                else:
-                    stats.is_banned = 0
+                stats.is_banned = 1 if self.remove_chat_user(id) else 0
                 stats.save()
 
     def ban_off(self, users):
@@ -205,6 +232,30 @@ class CommandHandler:
         else:
             self.send_msg(msg=get_delete_dogs())
 
+    def settings(self, text):
+        text_array = text.split(' ')
+        print(len(text_array))
+        print(text_array)
+        if len(text_array) >= 2:
+            type_set = int(text_array[0])
+            val = text_array[1]
+            if type_set == 1:
+                if int(val) == 0 or int(val) == 1:
+                    settings_set(self.chat_id, type_set, val)
+                    return True
+            if type_set == 2:
+                if int(val) == 0 or int(val) == 1:
+                    settings_set(self.chat_id, type_set, val)
+                    return True
+            if type_set == 3:
+                settings_set(self.chat_id, type_set, val)
+                return True
+            if type_set == 4:
+                if int(val) == 0 or int(val) == 1:
+                    settings_set(self.chat_id, type_set, val)
+                    return True
+        return False
+
     def is_admin(self):
         try:
             chat_users = self.api.messages.getConversationMembers(
@@ -213,7 +264,6 @@ class CommandHandler:
                 if self.user_id == chat_user['member_id'] and chat_user.get('is_admin'):
                     return True
         except vk.exceptions.VkAPIError:
-            self.send_msg(msg=not_access())
             return False
         return False
 
@@ -238,23 +288,23 @@ class CommandHandler:
             return True
 
         if re.match('преды', text):
-            # self.get_inform()
+            self.get_preds()
             return True
 
         if re.match('баны', text):
-            # self.get_inform()
+            self.get_bans()
             return True
 
         if re.match('браки', text):
             # self.get_inform()
             return True
 
-        if re.match('баны', text):
-            # self.get_inform()
-            return True
-
         if self.is_admin():
-            if re.match('установить пред', text):
+            print("is_ad")
+            if re.match('настройка', text):
+                kek = self.settings(text.replace(text[:10], ''))
+                if kek:
+                    self.send_msg(msg="Сохранено!")
                 return True
 
             if re.match('исключить собачек', text):

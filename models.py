@@ -363,6 +363,18 @@ def find_all_users_by_msg(chat_id):
     ).order_by(StatsUser.len.desc()).limit(10)
 
 
+def get_preds_db(chat_id, user_id):
+    return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_pred > 0)
+
+
+def get_bans_db(chat_id, user_id):
+    return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_banned == 1)
+
+def settings_set(chat_id, id_type, val):
+    settings = Settings.get(Settings.id_chat==chat_id, Settings.id_type == id_type)
+    settings.val = val
+    settings.save()
+
 def get_hello(id):
     return 'Привет, %s &#128521; Рекомендуем администратору беседы зайти на сайт' % id
 
