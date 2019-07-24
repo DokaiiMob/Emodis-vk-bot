@@ -97,6 +97,7 @@ class StatsUser(BaseModel):
     len = IntegerField(null=False, default=0)
     is_banned = IntegerField(null=False, default=0)
     is_pred = IntegerField(null=False, default=0)
+    lvl = IntegerField(null=False, default=0)
 
     class Meta:
         db_table = "user_to_chat"
@@ -267,7 +268,19 @@ def find_all_settings(id_chat):
     return Settings.select().where(Settings.id_chat == id_chat)
 
 
-def find_all_stats(id_user, id_chat, _datetime):
+def find_all_stats_sum(id_user, id_chat):
+    try:
+        User.select().where(User.id == int(id_user)).get()
+    except User.DoesNotExist:
+        add_user(id_user, '')
+
+    return Stats.select(fn.SUM(Stats.count_msgs).alias("count_msgs")).where(
+        Stats.id_user == id_user,
+        Stats.id_chat == id_chat
+    ).get()
+
+
+def find_all_stats_by_datetime(id_user, id_chat, _datetime):
     try:
         User.select().where(User.id == int(id_user)).get()
     except User.DoesNotExist:
@@ -284,12 +297,12 @@ def find_stats_user_and_chat(id_user, id_chat):
     exist = True
     _datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:00:00')
     try:
-        stats = find_all_stats(id_user, id_chat, _datetime)
+        stats = find_all_stats_by_datetime(id_user, id_chat, _datetime)
     except Stats.DoesNotExist:
         exist = False
     if not exist:
         add_stats(id_user, id_chat, _datetime)
-        stats = find_all_stats(id_user, id_chat, _datetime)
+        stats = find_all_stats_by_datetime(id_user, id_chat, _datetime)
     return stats
 
 
@@ -358,10 +371,17 @@ def update_chat_count(id, new_val):
 
 
 def find_all_users_by_msg(chat_id):
-    return StatsUser.select(StatsUser, User).join(User).where(
-        StatsUser.id_chat == chat_id
-    ).order_by(StatsUser.len.desc()).limit(10)
-
+    stats = Stats.select(fn.SUM(Stats.count_msgs).alias('count_msgs'), Stats.id_user).where(
+        Stats.id_chat == chat_id).group_by(Stats.id_user).order_by(Stats.count_msgs.desc()).limit(10)
+    msg = ''
+    index = 1
+    for stat in stats:
+        user_data = StatsUser.select(StatsUser.len).where(
+            StatsUser.id_chat == chat_id, StatsUser.id_user == stat.id_user).get()
+        msg += "#{0} {1} {2}/{3}\n".format(index,
+                                           find_user(stat.id_user).full_name, user_data.len, stat.count_msgs)
+        index = index + 1
+    return msg
 
 def get_preds_db(chat_id, user_id):
     return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_pred > 0)
@@ -370,10 +390,13 @@ def get_preds_db(chat_id, user_id):
 def get_bans_db(chat_id, user_id):
     return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_banned == 1)
 
+
 def settings_set(chat_id, id_type, val):
-    settings = Settings.get(Settings.id_chat==chat_id, Settings.id_type == id_type)
+    settings = Settings.get(Settings.id_chat == chat_id,
+                            Settings.id_type == id_type)
     settings.val = val
     settings.save()
+
 
 def get_hello(id):
     return 'Привет, %s &#128521; Рекомендуем администратору беседы зайти на сайт' % id

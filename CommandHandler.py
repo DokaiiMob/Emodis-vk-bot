@@ -5,7 +5,7 @@ from random import randint
 import re
 import vk
 from config import GROUP_ID
-from models import get_pred, get_hello, find_user, not_access, find_all_users_by_msg, get_help, get_random, find_stats_addit_user_and_chat, get_delete_dogs_not, get_delete_dogs, get_preds_db, get_bans_db, settings_set
+from models import get_pred, get_hello, find_user, not_access, find_all_users_by_msg, get_help, get_random, find_stats_addit_user_and_chat, get_delete_dogs_not, get_delete_dogs, get_preds_db, get_bans_db, settings_set, find_all_stats_sum
 import locale
 
 
@@ -101,14 +101,7 @@ class CommandHandler:
         return users
 
     def get_top(self):
-        msg = ''
-        index = 1
-        for s in find_all_users_by_msg(self.chat_id):
-            name = self.api.users.get(user_ids=s.id_user)[0]
-            msg += "#{0} {1} {2} {3}\n".format(index,
-                                               name['first_name'], name['last_name'], s.len)
-            index = index + 1
-        self.send_msg(msg)
+        self.send_msg(find_all_users_by_msg(self.chat_id))
 
     def get_help(self):
         self.send_msg(msg=get_help())
@@ -232,10 +225,16 @@ class CommandHandler:
         else:
             self.send_msg(msg=get_delete_dogs())
 
+    def get_need_lvl(self, old):
+        all_count_msgs = find_all_stats_sum(
+            self.user_id, self.chat_id).count_msgs
+        if round(int(all_count_msgs) ** 0.2) > old:
+            return round(int(all_count_msgs) ** 0.2)
+        else:
+            return old
+
     def settings(self, text):
         text_array = text.split(' ')
-        print(len(text_array))
-        print(text_array)
         if len(text_array) >= 2:
             type_set = int(text_array[0])
             val = text_array[1]
@@ -300,7 +299,6 @@ class CommandHandler:
             return True
 
         if self.is_admin():
-            print("is_ad")
             if re.match('настройка', text):
                 kek = self.settings(text.replace(text[:10], ''))
                 if kek:
