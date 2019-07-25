@@ -5,8 +5,9 @@ from random import randint
 import re
 import vk
 from config import GROUP_ID
-from models import get_pred, get_hello, find_user, not_access, find_all_users_by_msg, get_help, get_random, find_stats_addit_user_and_chat, get_delete_dogs_not, get_delete_dogs, get_preds_db, get_bans_db, settings_set, find_all_stats_sum
+from models import *
 import locale
+import datetime
 
 
 class CommandHandler:
@@ -61,6 +62,7 @@ class CommandHandler:
             -2147483647, 2147483647), message=msg)
 
     def getConversationsById(self):
+        # поставить обработчик
         chat_data = self.api.messages.getConversationsById(
             peer_ids=self.peer_id, group_id=GROUP_ID)
         if chat_data['items']:
@@ -233,6 +235,43 @@ class CommandHandler:
         else:
             return old
 
+    def get_married(self, user):
+        if re.match('id', user.split('|')[0]):
+            id = user.split('|')[0].split('id')[1]
+            marryed = add_marrieds(self.user_id, id, self.chat_id)
+            if marryed == 1:
+                self.send_msg(
+                    msg="Нужно подтвердить другому участнику, написав Работяга брак да/нет")
+            if marryed == 0:
+                self.send_msg(msg="Брак невозможен")
+
+    def get_all_marry(self):
+        m = get_marryieds(self.chat_id)
+        print("работяга браки")
+        if m:
+            msg = 'Все браки: \n'
+            index = 1
+            time = datetime.datetime.now()
+            for mr in m:
+                msg += "#{0} {1} и {2} {3} дн.\n".format(
+                    index, mr.id_user_one.full_name, mr.id_user_two.full_name, abs(time - mr.date_time).days)
+                index = index + 1
+            self.send_msg(msg=msg)
+        else:
+            self.send_msg(msg="Браков ещё нет")
+
+    def delete_married(self):
+        if del_marry(self.chat_id, self.user_id):
+            self.send_msg(msg="В браке отказано:)")
+
+    def remove_married(self):
+        if del_marry_all(self.chat_id, self.user_id):
+            self.send_msg(msg="Брак аннулирован:)")
+
+    def save_married(self):
+        if done_marry(self.chat_id, self.user_id):
+            self.send_msg(msg="Поздравляю:)")
+
     def settings(self, text):
         text_array = text.split(' ')
         if len(text_array) >= 2:
@@ -286,16 +325,36 @@ class CommandHandler:
             self.get_inform()
             return True
 
-        if re.match('преды', text):
-            self.get_preds()
+        if re.match('все', text):
+            text = text.replace(text[:4], '')
+
+            if re.match('преды', text):
+                self.get_preds()
+                return True
+
+            if re.match('баны', text):
+                self.get_bans()
+                return True
+
+            if re.match('браки', text):
+                self.get_all_marry()
+                return True
+
+        if re.match('развод', text):
+            self.remove_married()
             return True
 
-        if re.match('баны', text):
-            self.get_bans()
-            return True
-
-        if re.match('браки', text):
-            # self.get_inform()
+        if re.match('брак', text):
+            text = text.replace(text[:5], '')
+            if re.match('нет', text):
+                self.delete_married()
+                return True
+            if re.match('да', text):
+                self.save_married()
+                return True
+            users = self.parse_users(text)
+            if users:
+                self.get_married(users[0])
             return True
 
         if self.is_admin():
@@ -309,19 +368,21 @@ class CommandHandler:
                 self.dog_kick()
                 return True
 
-            if re.match('снять пред', text):
-                users = self.parse_users(text)
-                if users:
-                    self.pred_off(users)
-                    self.send_msg(msg="Готово!")
-                return True
+            if re.match('снять', text):
+                text = text.replace(text[:6], '')
+                if re.match('пред', text):
+                    users = self.parse_users(text)
+                    if users:
+                        self.pred_off(users)
+                        self.send_msg(msg="Готово!")
+                    return True
 
-            if re.match('снять бан', text):
-                users = self.parse_users(text)
-                if users:
-                    self.ban_off(users)
-                    self.send_msg(msg="Готово!")
-                return True
+                if re.match('бан', text):
+                    users = self.parse_users(text)
+                    if users:
+                        self.ban_off(users)
+                        self.send_msg(msg="Готово!")
+                    return True
 
             if re.match('бан', text):
                 users = self.parse_users(text)
