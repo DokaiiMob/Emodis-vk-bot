@@ -21,7 +21,8 @@ class Reactions:
         """
         reactions_files = glob(r'reactions/*.json')
         schema = ReactionSchema(many=True)
-        reactions: List[Dict] = []
+        # reactions: List[Dict] = []
+        reactions = []
         for file in reactions_files:
             with open(file, encoding='utf-8') as f:
                 validated_data = schema.loads(f.read())
