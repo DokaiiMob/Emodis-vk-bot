@@ -63,12 +63,14 @@ class CommandHandler:
 
     def getConversationsById(self):
         # поставить обработчик
-        chat_data = self.api.messages.getConversationsById(
-            peer_ids=self.peer_id, group_id=GROUP_ID)
-        if chat_data['items']:
-            if chat_data['items'][0]:
-                return chat_data['items'][0]['chat_settings']
-        return False
+        try:
+            chat_data = self.api.messages.getConversationsById(
+                peer_ids=self.peer_id, group_id=GROUP_ID)
+            if chat_data['items']:
+                if chat_data['items'][0]:
+                    return chat_data['items'][0]['chat_settings']
+        except vk.exceptions.VkAPIError:
+            return False
 
     def getConversationMembers(self):
         return self.api.messages.getConversationMembers(peer_id=self.peer_id, group_id=GROUP_ID)['profiles']
@@ -85,15 +87,13 @@ class CommandHandler:
         text = text.strip()
         if re.match('работяга', text.lower()):
             text = text.replace(text[:9], '')
-            return True, text
+            return True, text.strip()
         if re.match("\[club183796256\|\@emodis\],", text.lower()):
             text = text.replace(text[:24], '')
-            text = text.strip()
-            return True, text
+            return True, text.strip()
         if re.match("\[club183796256\|\@emodis\]", text.lower()):
             text = text.replace(text[:23], '')
-            text = text.strip()
-            return True, text
+            return True, text.strip()
         return False, text
 
     def parse_users(self, text):

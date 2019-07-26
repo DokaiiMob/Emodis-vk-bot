@@ -41,13 +41,10 @@ while True:
 
             chat = find_chat_meth(int(update['peer_id'] - 2000000000))
             ch.chat_id = chat.id
-            try:
-                chat_data = ch.getConversationsById()
-                if chat_data:
-                    chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
-                    chat.save()
-            except vk.exceptions.VkAPIError:
-                print('not access')
+            chat_data = ch.getConversationsById()
+            if chat_data:
+                chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
+                chat.save()
 
             # settings parse
             block_url_chat = False
