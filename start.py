@@ -9,12 +9,13 @@ from config import *
 import vk
 import re
 import CommandHandler
-
+from reactions import Reactions
 
 session = vk.Session(access_token=VK_API_ACCESS_TOKEN)
 api = vk.API(session, v=VK_API_VERSION)
 ch = CommandHandler.CommandHandler(api)
 db = DataBase()
+reactions = Reactions()
 
 while True:
     longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
@@ -41,6 +42,7 @@ while True:
 
             chat = find_chat_meth(int(update['peer_id'] - 2000000000))
             ch.chat_id = chat.id
+            # 
             chat_data = ch.getConversationsById()
             if chat_data:
                 chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
@@ -71,6 +73,10 @@ while True:
             # Create Message object
             text = update['text']
             attachments = update['attachments']
+
+            r = reactions.message_handler(text)
+            if r:
+                ch.send_msg(msg=r)
 
             # Get user data from database
             user = find_user(update['from_id'])

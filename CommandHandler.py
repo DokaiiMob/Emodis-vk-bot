@@ -62,7 +62,6 @@ class CommandHandler:
             -2147483647, 2147483647), message=msg)
 
     def getConversationsById(self):
-        # поставить обработчик
         try:
             chat_data = self.api.messages.getConversationsById(
                 peer_ids=self.peer_id, group_id=GROUP_ID)
