@@ -27,7 +27,7 @@ class Reactions:
             with open(file, encoding='utf-8') as f:
                 validated_data = schema.loads(f.read())
                 if validated_data.errors:
-                    print(f'Файл "{f.name}" содержит ошибки:',
+                    print("{0} error file".format(f.name))
                           validated_data.errors)
                 reactions += validated_data.data
         return reactions
