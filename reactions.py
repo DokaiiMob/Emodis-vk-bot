@@ -12,32 +12,21 @@ class Reactions:
 
     @staticmethod
     def load_reactions() -> List[Dict]:
-        """
-        Загружает реакции из файлов по пути reactions/ с именем *.json
-
-        Бэкслэши в файлах должны быть экранированы (напр., \b -> \\b)
-
-        Структура файла описана в классе ReactionsSchema в validators.py
-        """
         reactions_files = glob(r'reactions/*.json')
         schema = ReactionSchema(many=True)
-        # reactions: List[Dict] = []
-        reactions = []
+        reactions = []  # reactions: List[Dict] = []
         for file in reactions_files:
             with open(file, encoding='utf-8') as f:
                 validated_data = schema.loads(f.read())
                 if validated_data.errors:
                     print("{0} error file".format(f.name))
-                          validated_data.errors)
                 reactions += validated_data.data
         return reactions
 
     def message_handler(self, message) -> None:
-        # Каждый раз перемешиваем список реакций, затем
-        # отправляем первое попавшееся совпадение
         random.shuffle(self._reactions)
         for reaction in self._reactions:
-            chance: int = reaction['chance']
+            chance = int(reaction['chance'])
             if random.uniform(0, 100) > chance:
                 continue
 

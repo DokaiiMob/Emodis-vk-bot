@@ -312,10 +312,6 @@ class CommandHandler:
             self.get_top()
             return True
 
-        if re.match('помощь', text):
-            self.get_help()
-            return True
-
         if re.match('выбери', text):
             self.get_choise(text)
             return True
