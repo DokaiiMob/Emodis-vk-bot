@@ -7,7 +7,7 @@ from validators import ReactionSchema
 
 
 class Reactions:
-    def __init__(self, chat_id):
+    def __init__(self):
         self._reactions = self.load_reactions()
 
     @staticmethod
