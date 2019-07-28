@@ -246,7 +246,6 @@ class CommandHandler:
 
     def get_all_marry(self):
         m = get_marryieds(self.chat_id)
-        print("работяга браки")
         if m:
             msg = 'Все браки: \n'
             index = 1

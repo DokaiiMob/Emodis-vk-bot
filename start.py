@@ -31,18 +31,17 @@ while True:
         except (IntegrityError, OperationalError):
             db = DataBase()
             db.open_connection()
-        # Here `for` need to parallelize:
+
         for update in longPoll['updates']:
             if update['type'] != 'message_new':
                 continue
             update = update['object']
-            # print(update)
 
             ch.peer_id = update['peer_id']
 
             chat = find_chat_meth(int(update['peer_id'] - 2000000000))
             ch.chat_id = chat.id
-            # 
+
             chat_data = ch.getConversationsById()
             if chat_data:
                 chat.title, chat.members_count = chat_data['title'], chat_data['members_count']

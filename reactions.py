@@ -7,14 +7,14 @@ from validators import ReactionSchema
 
 
 class Reactions:
-    def __init__(self):
+    def __init__(self, chat_id):
         self._reactions = self.load_reactions()
 
     @staticmethod
     def load_reactions() -> List[Dict]:
-        reactions_files = glob(r'reactions/*.json')
+        reactions_files = glob(r'resources/reactions/*.json')
         schema = ReactionSchema(many=True)
-        reactions = []  # reactions: List[Dict] = []
+        reactions: List[Dict] = []
         for file in reactions_files:
             with open(file, encoding='utf-8') as f:
                 validated_data = schema.loads(f.read())
@@ -24,9 +24,10 @@ class Reactions:
         return reactions
 
     def message_handler(self, message) -> None:
+
         random.shuffle(self._reactions)
         for reaction in self._reactions:
-            chance = int(reaction['chance'])
+            chance: int = reaction['chance']
             if random.uniform(0, 100) > chance:
                 continue
 
