@@ -12,7 +12,7 @@ class Reactions:
 
     @staticmethod
     def load_reactions() -> List[Dict]:
-        reactions_files = glob(r'resources/reactions/*.json')
+        reactions_files = glob(r'reactions/*.json')
         schema = ReactionSchema(many=True)
         reactions: List[Dict] = []
         for file in reactions_files:
@@ -23,8 +23,7 @@ class Reactions:
                 reactions += validated_data.data
         return reactions
 
-    def message_handler(self, message) -> None:
-
+    def message_handler(self, message):
         random.shuffle(self._reactions)
         for reaction in self._reactions:
             chance: int = reaction['chance']

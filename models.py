@@ -97,6 +97,7 @@ class StatsUser(BaseModel):
     len = IntegerField(null=False, default=0)
     is_banned = IntegerField(null=False, default=0)
     is_pred = IntegerField(null=False, default=0)
+    is_ro = IntegerField(null=False, default=0)
     lvl = IntegerField(null=False, default=0)
 
     class Meta:

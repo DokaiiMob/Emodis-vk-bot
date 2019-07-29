@@ -71,6 +71,7 @@ while True:
 
             # Create Message object
             text = update['text']
+            conversation_message_id = update['conversation_message_id']
             attachments = update['attachments']
 
             r = reactions.message_handler(text)
@@ -92,6 +93,10 @@ while True:
 
             stats = find_stats_addit_user_and_chat(user.id, chat.id)
             stats.len = stats.len + len(text)
+            # if int(stats.is_ro) == 1:
+            #     print(stats.is_ro)
+            #     ch.delete_msg(conversation_message_id)
+            
             new_lvl = ch.get_need_lvl(stats.lvl)
             if new_lvl != stats.lvl:
                 stats.lvl = new_lvl

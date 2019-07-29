@@ -3,6 +3,7 @@
 
 from random import randint
 import re
+import requests
 import vk
 from config import GROUP_ID
 from models import *
@@ -60,6 +61,11 @@ class CommandHandler:
     def send_msg(self, msg):
         self.api.messages.send(peer_id=self.peer_id, random_id=randint(
             -2147483647, 2147483647), message=msg)
+
+    def delete_msg(self, id):
+        a = self.api.messages.getByConversationMessageId(peer_id=self.peer_id, conversation_message_ids=id,group_id=GROUP_ID)
+        self.api.messages.delete(
+            message_ids=str(id), delete_for_all=1, group_id=GROUP_ID)
 
     def getConversationsById(self):
         try:
@@ -196,6 +202,14 @@ class CommandHandler:
                 id = user.split('|')[0].split('id')[1]
                 stats = find_stats_addit_user_and_chat(id, self.chat_id)
                 stats.is_banned = 1 if self.remove_chat_user(id) else 0
+                stats.save()
+
+    def ro(self, users):
+        for user in users:
+            if re.match('id', user.split('|')[0]):
+                id = user.split('|')[0].split('id')[1]
+                stats = find_stats_addit_user_and_chat(id, self.chat_id)
+                stats.is_ro = 1
                 stats.save()
 
     def ban_off(self, users):
@@ -377,6 +391,12 @@ class CommandHandler:
                         self.ban_off(users)
                         self.send_msg(msg="Готово!")
                     return True
+
+            if re.match('ро', text):
+                users = self.parse_users(text)
+                if users:
+                    self.ro(users)
+                return True
 
             if re.match('бан', text):
                 users = self.parse_users(text)
