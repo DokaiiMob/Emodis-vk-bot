@@ -17,29 +17,31 @@ ch = CommandHandler.CommandHandler(api)
 db = DataBase()
 reactions = Reactions()
 
+longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
+server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']
+
 while True:
-    longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
-    server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']
+    try:
+        db.open_connection()
+    except (IntegrityError, OperationalError):
+        db = DataBase()
+        db.open_connection()
+
+    print("while")
     longPoll = post('%s' % server, data={'act': 'a_check',
                                          'key': key,
                                          'ts': ts,
-                                         'wait': 5}).json()
+                                         'wait': 25}).json()
+    print(len(longPoll['updates']))
 
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
-        try:
-            db.open_connection()
-        except (IntegrityError, OperationalError):
-            db = DataBase()
-            db.open_connection()
-
         for update in longPoll['updates']:
             if update['type'] != 'message_new':
                 continue
-            update = update['object']
-            print(update)
-            ch.peer_id = update['peer_id']
+            updateNew = update['object']
+            ch.peer_id = updateNew['peer_id']
 
-            chat = find_chat_meth(int(update['peer_id'] - 2000000000))
+            chat = find_chat_meth(int(updateNew['peer_id'] - 2000000000))
             ch.chat_id = chat.id
 
             # chat_data = ch.getConversationsById()
@@ -57,69 +59,71 @@ while True:
                 if id_type == 3:
                     ch.max_pred = int(settings.val)
 
-            if update.get('action'):
-                if update['action']['type'] == 'chat_invite_user':
+            if updateNew.get('action'):
+                if updateNew['action']['type'] == 'chat_invite_user':
                     ch.is_chat_invite_user(
-                        update['action']['member_id'])
-                if update['action']['type'] == 'chat_invite_user_by_link':
-                    ch.is_chat_invite_user(update['from_id'])
-                if update['action']['type'] == 'chat_title_update':
+                        updateNew['action']['member_id'])
+                if updateNew['action']['type'] == 'chat_invite_user_by_link':
+                    ch.is_chat_invite_user(updateNew['from_id'])
+                if updateNew['action']['type'] == 'chat_title_update':
                     print("chat title")
-                if update['action']['type'] == 'chat_kick_user':
+                if updateNew['action']['type'] == 'chat_kick_user':
                     print("kick_user or user_exit")
-                continue
+            else:
+                # Create Message object
+                text = updateNew['text']
+                conversation_message_id = updateNew['conversation_message_id']
+                attachments = updateNew['attachments']
 
-            # Create Message object
-            text = update['text']
-            conversation_message_id = update['conversation_message_id']
-            attachments = update['attachments']
+                r = reactions.message_handler(text)
+                if r:
+                    ch.send_msg(msg=r)
 
-            r = reactions.message_handler(text)
-            if r:
-                ch.send_msg(msg=r)
+                # # Get user data from database
+                user = find_user(updateNew['from_id'])
+                if user.id > 0 and len(user.full_name) == 0:
+                    user.full_name = ch.api_full_name(user.id)
+                    user.save()
 
-            # Get user data from database
-            user = find_user(update['from_id'])
-            if user.id > 0 and len(user.full_name) == 0:
-                user.full_name = ch.api_full_name(user.id)
-                user.save()
+                ch.user_id = user.id
+                print("chat: {0} user: {1}".format(chat.id, user.id))
 
-            ch.user_id = user.id
-            print("chat: {0} user: {1}".format(chat.id, user.id))
+                stats = find_stats_user_and_chat(user.id, chat.id)
+                stats.count_msgs = stats.count_msgs + 1
+                stats.save()
 
-            stats = find_stats_user_and_chat(user.id, chat.id)
-            stats.count_msgs = stats.count_msgs + 1
-            stats.save()
+                stats = find_stats_addit_user_and_chat(user.id, chat.id)
+                stats.len = stats.len + len(text)
 
-            stats = find_stats_addit_user_and_chat(user.id, chat.id)
-            stats.len = stats.len + len(text)
-            # if int(stats.is_ro) == 1:
-            #     print(stats.is_ro)
-            #     ch.delete_msg(conversation_message_id)
-            
-            new_lvl = ch.get_need_lvl(stats.lvl)
-            if new_lvl != stats.lvl:
-                stats.lvl = new_lvl
-                if new_lvl > 1:
-                    ch.send_msg(msg="@id{0} ({1}) получает {2} уровень!".format(
-                        user.id, user.full_name, new_lvl))
-            stats.save()
+                # # if int(stats.is_ro) == 1:
+                # #     print(stats.is_ro)
+                # #     ch.delete_msg(conversation_message_id)
 
-            add_text(user.id, chat.id, text, attachments)
+                new_lvl = ch.get_need_lvl(stats.lvl)
+                if new_lvl != stats.lvl:
+                    stats.lvl = new_lvl
+                    if new_lvl > 1:
+                        ch.send_msg(msg="@id{0} ({1}) получает {2} уровень!".format(
+                            user.id, user.full_name, new_lvl))
+                stats.save()
 
-            if block_mat:
-                if ch.check_slang(text):
-                    ch.give_pred_by_id(user.id, "Мат в чате.")
+                add_text(user.id, chat.id, text, attachments)
 
-            handler = ch.parse_bot(text)
-            if handler[0]:
-                text = handler[1]
-                ch.parse_command(text, user.id)
-        db.close_connection()
+                # if block_mat:
+                #     if ch.check_slang(text):
+                #         ch.give_pred_by_id(user.id, "Мат в чате.")
 
-    if longPoll.get('ts') and len(longPoll['ts']) != 0:
-        ts = longPoll['ts']
+                # handler = ch.parse_bot(text)
+                # if handler[0]:
+                #     text = handler[1]
+                #     ch.parse_command(text, user.id)
 
+    # if longPoll.get('ts') and len(longPoll['ts']) != 0:
+    #     print(ts)
+
+    db.close_connection()
     if longPoll.get('failed'):
         longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
         server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']
+    ts = longPoll['ts']
+    print(ts)
