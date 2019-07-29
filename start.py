@@ -23,7 +23,7 @@ while True:
     longPoll = post('%s' % server, data={'act': 'a_check',
                                          'key': key,
                                          'ts': ts,
-                                         'wait': 25}).json()
+                                         'wait': 5}).json()
 
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
         try:
@@ -36,16 +36,16 @@ while True:
             if update['type'] != 'message_new':
                 continue
             update = update['object']
-
+            print(update)
             ch.peer_id = update['peer_id']
 
             chat = find_chat_meth(int(update['peer_id'] - 2000000000))
             ch.chat_id = chat.id
 
-            chat_data = ch.getConversationsById()
-            if chat_data:
-                chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
-                chat.save()
+            # chat_data = ch.getConversationsById()
+            # if chat_data:
+            #     chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
+            #     chat.save()
 
             # settings parse
             block_url_chat = False
@@ -107,8 +107,9 @@ while True:
 
             add_text(user.id, chat.id, text, attachments)
 
-            if block_mat and ch.check_slang(text):
-                ch.give_pred_by_id(user.id, "Мат в чате.")
+            if block_mat:
+                if ch.check_slang(text):
+                    ch.give_pred_by_id(user.id, "Мат в чате.")
 
             handler = ch.parse_bot(text)
             if handler[0]:
