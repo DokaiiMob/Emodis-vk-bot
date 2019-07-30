@@ -22,7 +22,10 @@ server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']
 
 while True:
     try:
-        db.open_connection()
+        try:
+            db.open_connection()
+        except (peewee.OperationalError):
+            print("connection")
     except (IntegrityError, OperationalError):
         db = DataBase()
         db.open_connection()
@@ -32,12 +35,9 @@ while True:
                                          'key': key,
                                          'ts': ts,
                                          'wait': 25}).json()
-    print(len(longPoll['updates']))
 
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
         for update in longPoll['updates']:
-            if update['type'] != 'message_new':
-                continue
             updateNew = update['object']
             ch.peer_id = updateNew['peer_id']
 
@@ -50,15 +50,16 @@ while True:
             #     chat.save()
 
             # settings parse
-            block_url_chat = False
-            block_mat = False
-            for settings in find_all_settings(chat.id):
-                id_type = int(settings.id_type.id)
-                block_url_chat = id_type == 2 and int(settings.val) == 1
-                block_mat = id_type == 4 and int(settings.val) == 1
-                if id_type == 3:
-                    ch.max_pred = int(settings.val)
+            # block_url_chat = False
+            # block_mat = False
+            # for settings in find_all_settings(chat.id):
+                # id_type = int(settings.id_type.id)
+                # block_mat = id_type == 4 and int(settings.val) == 1
+                # block_url_chat = id_type == 2 and int(settings.val) == 1
+            #     if id_type == 3:
+            #         ch.max_pred = int(settings.val)
 
+            print("65_")
             if updateNew.get('action'):
                 if updateNew['action']['type'] == 'chat_invite_user':
                     ch.is_chat_invite_user(
@@ -108,19 +109,19 @@ while True:
                 stats.save()
 
                 add_text(user.id, chat.id, text, attachments)
-
+                print("added")
+                
                 # if block_mat:
-                #     if ch.check_slang(text):
-                #         ch.give_pred_by_id(user.id, "Мат в чате.")
+                if chat.id != 4 and ch.check_slang(text):
+                    ch.give_pred_by_id(user.id, "Мат в чате.")
 
-                # handler = ch.parse_bot(text)
-                # if handler[0]:
-                #     text = handler[1]
-                #     ch.parse_command(text, user.id)
+                handler = ch.parse_bot(text)
+                if handler[0]:
+                    text = handler[1]
+                    ch.parse_command(text, user.id)
 
     # if longPoll.get('ts') and len(longPoll['ts']) != 0:
     #     print(ts)
-
     db.close_connection()
     if longPoll.get('failed'):
         longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)

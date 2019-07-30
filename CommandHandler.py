@@ -59,8 +59,9 @@ class CommandHandler:
         return "{0} {1}".format(name['first_name'], name['last_name'])
 
     def send_msg(self, msg):
-        self.api.messages.send(peer_id=self.peer_id, random_id=randint(
+        a = self.api.messages.send(peer_id=self.peer_id, random_id=randint(
             -2147483647, 2147483647), message=msg)
+        print(a)
 
     def delete_msg(self, id):
         a = self.api.messages.getByConversationMessageId(peer_id=self.peer_id, conversation_message_ids=id,group_id=GROUP_ID)
