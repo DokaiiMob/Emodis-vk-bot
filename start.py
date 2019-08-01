@@ -59,7 +59,6 @@ while True:
             #     if id_type == 3:
             #         ch.max_pred = int(settings.val)
 
-            print("65_")
             if updateNew.get('action'):
                 if updateNew['action']['type'] == 'chat_invite_user':
                     ch.is_chat_invite_user(
@@ -72,8 +71,10 @@ while True:
                     print("kick_user or user_exit")
             else:
                 # Create Message object
+                # print(updateNew)
                 text = updateNew['text']
                 conversation_message_id = updateNew['conversation_message_id']
+                ch.con_msg_id = conversation_message_id
                 attachments = updateNew['attachments']
 
                 r = reactions.message_handler(text)
@@ -113,7 +114,7 @@ while True:
                 
                 # if block_mat:
                 if chat.id != 4 and ch.check_slang(text):
-                    ch.give_pred_by_id(user.id, "Мат в чате.")
+                    ch.give_pred_by_id(user.id, "Некультурно общаемся?")
 
                 handler = ch.parse_bot(text)
                 if handler[0]:
