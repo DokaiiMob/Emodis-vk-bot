@@ -114,7 +114,7 @@ while True:
                     ch.give_pred_by_id(user.id, "Некультурно общаемся?")
 
                 if re.match('дуэль', text.strip().lower()):
-                    if chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < 60:
+                    if chat.id != 4 and chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < 60:
                         ch.send_msg(
                             msg="Дуэль уже состоялась, проводятся один раз в минуту")
                     else:
