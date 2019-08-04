@@ -36,3 +36,4 @@ class Reactions:
                         return random.choice(reaction['reactions'])
             else:
                 return random.choice(reaction['reactions'])
+        return False

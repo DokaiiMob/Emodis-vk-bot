@@ -6,6 +6,7 @@ from random import randint
 from requests import post
 from models import *
 from config import *
+import random
 import vk
 import re
 import CommandHandler
@@ -53,9 +54,9 @@ while True:
             # block_url_chat = False
             # block_mat = False
             # for settings in find_all_settings(chat.id):
-                # id_type = int(settings.id_type.id)
-                # block_mat = id_type == 4 and int(settings.val) == 1
-                # block_url_chat = id_type == 2 and int(settings.val) == 1
+            # id_type = int(settings.id_type.id)
+            # block_mat = id_type == 4 and int(settings.val) == 1
+            # block_url_chat = id_type == 2 and int(settings.val) == 1
             #     if id_type == 3:
             #         ch.max_pred = int(settings.val)
 
@@ -71,15 +72,12 @@ while True:
                     print("kick_user or user_exit")
             else:
                 # Create Message object
-                # print(updateNew)
+                print(updateNew)
+                send_id_message = 0
                 text = updateNew['text']
                 conversation_message_id = updateNew['conversation_message_id']
                 ch.con_msg_id = conversation_message_id
                 attachments = updateNew['attachments']
-
-                r = reactions.message_handler(text)
-                if r:
-                    ch.send_msg(msg=r)
 
                 # # Get user data from database
                 user = find_user(updateNew['from_id'])
@@ -98,31 +96,79 @@ while True:
                 stats.len = stats.len + len(text)
 
                 # # if int(stats.is_ro) == 1:
-                # #     print(stats.is_ro)
                 # #     ch.delete_msg(conversation_message_id)
 
                 new_lvl = ch.get_need_lvl(stats.lvl)
                 if new_lvl != stats.lvl:
                     stats.lvl = new_lvl
-                    if new_lvl > 1:
+                    if new_lvl > 1 and int(user.id) > 0:
                         ch.send_msg(msg="@id{0} ({1}) получает {2} уровень!".format(
                             user.id, user.full_name, new_lvl))
                 stats.save()
 
                 add_text(user.id, chat.id, text, attachments)
                 print("added")
-                
+
                 # if block_mat:
-                if chat.id != 4 and ch.check_slang(text):
+                if chat.id != 4 and ch.check_slang(text) and int(user.id) > 0:
                     ch.give_pred_by_id(user.id, "Некультурно общаемся?")
 
-                handler = ch.parse_bot(text)
-                if handler[0]:
-                    text = handler[1]
-                    ch.parse_command(text, user.id)
+                if re.match('дуэль', text.strip().lower()):
+                    if chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < 60:
+                        ch.send_msg(
+                            msg="Дуэль уже состоялась, проводятся один раз в минуту")
+                    else:
+                        if chat.duel_id == 0:
+                            ch.send_msg(msg="Хорошо, @id{0} ({1}), ждем твоего оппонента...".format(
+                                user.id, user.full_name))
+                            chat.duel_id = user.id
+                            chat.save()
+                        else:
+                            if chat.duel_id != user.id:
+                                ch.send_msg(msg="@id{0} ({1}), принял вызов!".format(
+                                    user.id, user.full_name))
+                                if randint(0, 100) > 50:
+                                    user_ = find_user(chat.duel_id)
+                                    ch.send_msg(msg="Произошла дуэль, @id{0} ({1}) падает замертво. F".format(
+                                        user_.id, user_.full_name))
+                                    stats.count_duel_save = stats.count_duel_save + 1
+                                    stats.save()
+                                    stats_ = find_stats_addit_user_and_chat(
+                                        chat.duel_id, chat.id)
+                                    stats_.count_duel_die = stats.count_duel_die + 1
+                                    stats_.save()
+                                else:
+                                    ch.send_msg(msg="Произошла дуэль, @id{0} ({1}) падает замертво. F".format(
+                                        user.id, user.full_name))
+                                    stats.count_duel_die = stats.count_duel_die + 1
+                                    stats.save()
+                                    stats_ = find_stats_addit_user_and_chat(
+                                        chat.duel_id, chat.id)
+                                    stats_.count_duel_save = stats.count_duel_save + 1
+                                    stats_.save()
+                                chat.duel_id = 0
+                                chat.date_last_duel = datetime.datetime.now()
+                                chat.save()
+                                stats.save()
+                            else:
+                                ch.send_msg(msg="Сам себя, F")
+                                chat.duel_id = 0
+                                stats.count_duel_die = stats.count_duel_die + 1
+                                chat.date_last_duel = datetime.datetime.now()
+                                stats.save()
+                                chat.save()
+                else:
+                    is_reaction = reactions.message_handler(text)
 
-    # if longPoll.get('ts') and len(longPoll['ts']) != 0:
-    #     print(ts)
+                    if is_reaction:
+                        ch.send_msg(msg=is_reaction)
+
+                    if not is_reaction:
+                        handler = ch.parse_bot(text)
+                        if handler[0]:
+                            text = handler[1]
+                            ch.parse_command(text, user.id)
+
     db.close_connection()
     if longPoll.get('failed'):
         longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)

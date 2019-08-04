@@ -42,6 +42,9 @@ class Chat(BaseModel):
     title = CharField(max_length=255)
     admin_id = IntegerField(null=False)
     members_count = IntegerField(null=False)
+    duel_id = IntegerField(null=False, default=0)
+    date_last_duel = DateTimeField(
+        default=datetime.datetime.now())
 
     class Meta:
         db_table = "chats"
@@ -99,6 +102,8 @@ class StatsUser(BaseModel):
     is_pred = IntegerField(null=False, default=0)
     is_ro = IntegerField(null=False, default=0)
     lvl = IntegerField(null=False, default=0)
+    count_duel_save = IntegerField(null=False, default=0)
+    count_duel_die = IntegerField(null=False, default=0)
 
     class Meta:
         db_table = "user_to_chat"
@@ -362,6 +367,18 @@ def find_stats_user_and_chat(id_user, id_chat):
         stats = find_all_stats_by_datetime(id_user, id_chat, _datetime)
     return stats
 
+def get_duel_die(id_chat):
+    return StatsUser.select().where(
+        StatsUser.id_chat == id_chat,
+        StatsUser.count_duel_die > 0
+    ).order_by(StatsUser.count_duel_die.desc()).limit(10)
+
+def get_duel_save(id_chat):
+    return StatsUser.select().where(
+        StatsUser.id_chat == id_chat,
+        StatsUser.count_duel_save > 0
+    ).order_by(StatsUser.count_duel_save.desc()).limit(10)
+
 
 def find_all_stats_user(id_user, id_chat):
     try:
@@ -429,24 +446,24 @@ def update_chat_count(id, new_val):
 
 def find_all_users_by_msg(chat_id):
     stats = Stats.select(fn.SUM(Stats.count_msgs).alias('count_msgs'), Stats.id_user).where(
-        Stats.id_chat == chat_id).group_by(Stats.id_user).order_by(Stats.count_msgs.desc()).limit(10)
+        Stats.id_chat == chat_id, Stats.id_user > 0).group_by(Stats.id_user).order_by(fn.SUM(Stats.count_msgs).desc()).limit(10)
     msg = ''
     index = 1
     for stat in stats:
-        user_data = StatsUser.select(StatsUser.len).where(
+        user_data = StatsUser.select().where(
             StatsUser.id_chat == chat_id, StatsUser.id_user == stat.id_user).get()
-        msg += "#{0} {1} {2}/{3}\n".format(index,
-                                           find_user(stat.id_user).full_name, user_data.len, stat.count_msgs)
+        msg += "#{0} {1} {2} сообщений, {3} ур.\n".format(index,
+            find_user(stat.id_user).full_name, stat.count_msgs, user_data.lvl)
         index = index + 1
     return msg
 
 
 def get_preds_db(chat_id, user_id):
-    return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_pred > 0)
+    return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_pred > 0, StatsUser.id_user > 0)
 
 
 def get_bans_db(chat_id, user_id):
-    return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_banned == 1)
+    return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_banned == 1, StatsUser.id_user > 0)
 
 
 def settings_set(chat_id, id_type, val):
@@ -458,10 +475,6 @@ def settings_set(chat_id, id_type, val):
 
 def get_hello(id):
     return 'Привет, %s &#128521; Рекомендуем администратору беседы зайти на сайт' % id
-
-
-def get_help():
-    return 'Привет! Держи ссылку на команды: https://vk.com/@emodis-komandy-bota'
 
 
 def get_delete_dogs_not():

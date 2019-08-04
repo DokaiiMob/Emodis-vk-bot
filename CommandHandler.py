@@ -61,14 +61,13 @@ class CommandHandler:
         return "{0} {1}".format(name['first_name'], name['last_name'])
 
     def send_msg(self, msg):
-        a = self.api.messages.getByConversationMessageId(peer_id=self.peer_id,conversation_message_ids=self.con_msg_id,group_id=GROUP_ID)
-        print(a)
-        # exit()
-        self.api.messages.send(peer_id=self.peer_id, random_id=randint(
+        # a = self.api.messages.getByConversationMessageId(peer_id=self.peer_id,conversation_message_ids=self.con_msg_id,group_id=GROUP_ID)
+        return self.api.messages.send(peer_id=self.peer_id, random_id=randint(
             -2147483647, 2147483647), message=msg)
 
     def delete_msg(self, id):
-        a = self.api.messages.getByConversationMessageId(peer_id=self.peer_id, conversation_message_ids=id,group_id=GROUP_ID)
+        # a = self.api.messages.getByConversationMessageId(
+        #     peer_id=self.peer_id, conversation_message_ids=id, group_id=GROUP_ID)
         self.api.messages.delete(
             message_ids=str(id), delete_for_all=1, group_id=GROUP_ID)
 
@@ -114,9 +113,6 @@ class CommandHandler:
 
     def get_top(self):
         self.send_msg(find_all_users_by_msg(self.chat_id))
-
-    def get_help(self):
-        self.send_msg(msg=get_help())
 
     def get_choise(self, text):
         msg = text.replace(text[:6], '')
@@ -177,7 +173,8 @@ class CommandHandler:
             # self.send_msg(msg="Лимит предупреждений! Кик :-)")
             # И парсить максимальное кол-во
             self.remove_chat_user(user_id)
-        self.send_msg(msg=msg + ' ' + get_pred(stats.is_pred, self.max_pred))
+        self.send_msg(msg="{0} Предупреждение {1} из {2}".format(
+            msg, stats.is_pred, self.max_pred))
 
     def pred(self, users):
         for user in users:
@@ -194,7 +191,8 @@ class CommandHandler:
                     # self.send_msg(msg="Лимит предупреждений! Кик :-)")
                     # И парсить максимальное кол-во
                     self.remove_chat_user(id)
-                self.send_msg(msg=get_pred(stats.is_pred, self.max_pred))
+                self.send_msg(msg="Предупреждение {0} из {1}".format(
+                    stats.is_pred, self.max_pred))
 
     def kick(self, users):
         for user in users:
@@ -322,9 +320,34 @@ class CommandHandler:
             return False
         return False
 
+    def get_duel(self, type):
+        if type == 1:
+            arr_duel = get_duel_save(self.chat_id)
+        else:
+            arr_duel = get_duel_die(self.chat_id)
+        if len(arr_duel) > 0:
+            msg = ''
+            index = 1
+            for duel in arr_duel:
+                if type == 1:
+                    msg += "#{0} {1} {2} р.\n".format(
+                        index, duel.id_user.full_name, duel.count_duel_save)
+                else:
+                    msg += "#{0} {1} {2} р.\n".format(
+                        index, duel.id_user.full_name, duel.count_duel_die)
+                index = index + 1
+            self.send_msg(msg=msg)
+        else:
+            self.send_msg(msg="Дуэлей ещё не было")
+        return False
+
     def parse_command(self, text, user_id):
 
         self.user_id = user_id
+
+        if re.match('герой', text):
+            self.get_hero()
+            return True
 
         if re.match('топ', text):
             self.get_top()
@@ -351,6 +374,13 @@ class CommandHandler:
 
             if re.match('браки', text):
                 self.get_all_marry()
+                return True
+
+            if re.match('победители', text):
+                self.get_duel(1)
+                return True
+            if re.match('F', text):
+                self.get_duel(0)
                 return True
 
         if re.match('развод', text):
@@ -420,3 +450,5 @@ class CommandHandler:
                 if users:
                     self.kick(users)
                 return True
+        self.send_msg(msg="Эй, я не знаю такую команду!")
+        return False
