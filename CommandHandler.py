@@ -383,9 +383,9 @@ class CommandHandler:
                 self.get_duel(0)
                 return True
 
-        if re.match('развод', text):
-            self.remove_married()
-            return True
+        # if re.match('развод', text):
+        #     self.remove_married()
+        #     return True
 
         if re.match('брак', text):
             text = text.replace(text[:5], '')
@@ -402,9 +402,10 @@ class CommandHandler:
 
         if self.is_admin():
             if re.match('настройка', text):
-                kek = self.settings(text.replace(text[:10], ''))
-                if kek:
-                    self.send_msg(msg="Сохранено!")
+                self.send_msg(msg="Выключено!")
+                # kek = self.settings(text.replace(text[:10], ''))
+                # if kek:
+                #     self.send_msg(msg="Сохранено!")
                 return True
 
             if re.match('исключить собачек', text):

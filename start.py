@@ -110,8 +110,8 @@ while True:
                 print("added")
 
                 # if block_mat:
-                if chat.id != 4 and ch.check_slang(text) and int(user.id) > 0:
-                    ch.give_pred_by_id(user.id, "Некультурно общаемся?")
+                # if chat.id != 4 and ch.check_slang(text) and int(user.id) > 0:
+                #     ch.give_pred_by_id(user.id, "Некультурно общаемся?")
 
                 if re.match('дуэль', text.strip().lower()):
                     if chat.id != 4 and chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < 60:
