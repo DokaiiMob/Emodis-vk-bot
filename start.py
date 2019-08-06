@@ -75,6 +75,11 @@ while True:
                 print(updateNew)
                 send_id_message = 0
                 text = updateNew['text']
+                fwd_messages = updateNew['fwd_messages']
+                reply_message = False
+                if updateNew.get('reply_message')  and len(updateNew['reply_message']) != 0:
+                    reply_message = updateNew['reply_message']
+                
                 conversation_message_id = updateNew['conversation_message_id']
                 ch.con_msg_id = conversation_message_id
                 attachments = updateNew['attachments']
@@ -162,6 +167,14 @@ while True:
 
                     if is_reaction:
                         ch.send_msg(msg=is_reaction)
+
+                    if reply_message and ch.is_admin():
+                        if re.match('бан', text.strip().lower()):
+                            ch.ban_user(reply_message.get('from_id'))
+                        if re.match('пред', text.strip().lower()):
+                            ch.pred_user(reply_message.get('from_id'))
+                        if re.match('кик', text.strip().lower()):
+                            ch.remove_chat_user(reply_message.get('from_id'))
 
                     if not is_reaction:
                         handler = ch.parse_bot(text)
