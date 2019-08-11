@@ -54,31 +54,33 @@ def add_marrieds(user_id_one, user_id_two, chat_id):
 
 def done_marry(chat_id, user_id):
     m = Marrieds.select().where(
-        Marrieds.id_chat == int(chat_id), Marrieds.id_user_two == user_id).get()
+        Marrieds.id_chat == int(chat_id), Marrieds.id_user_two == user_id)
     if m:
-        m.is_ok = 1
-        m.save()
+        for _m in m:  
+            _m.is_ok = 1
+            _m.save()
         return True
     return False
 
 
 def del_marry_all(chat_id, user_id):
-    m = Marrieds.select().where(
-        Marrieds.id_chat == int(chat_id), (Marrieds.id_user_two == user_id | Marrieds.id_user_one == user_id)).get()
+    m = Marrieds.select().where(Marrieds.id_chat == chat_id, ((Marrieds.id_user_two == user_id) | (Marrieds.id_user_one == user_id)))
     if m:
-        m.id_chat = 0
-        m.save()
-        return True
+        for _m in m:  
+            _m.id_chat = 0
+            _m.save()
+            return True
     return False
 
 
 def del_marry(chat_id, user_id):
     m = Marrieds.select().where(
-        Marrieds.id_chat == int(chat_id), Marrieds.id_user_two == user_id).get()
+        Marrieds.id_chat == int(chat_id), Marrieds.id_user_two == user_id)
     if m:
-        m.id_chat = 0
-        m.save()
-        return True
+        for _m in m:  
+            _m.id_chat = 0
+            _m.save()
+            return True
     return False
 
 

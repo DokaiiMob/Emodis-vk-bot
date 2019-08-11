@@ -56,15 +56,18 @@ while True:
             chat = find_chat_meth(int(updateNew['peer_id'] - 2000000000))
             ch.chat_id = chat.id
 
-            # settings parse
-            # block_url_chat = False
-            # block_mat = False
-            # for settings in find_all_settings(chat.id):
-            # id_type = int(settings.id_type.id)
-            # block_mat = id_type == 4 and int(settings.val) == 1
-            # block_url_chat = id_type == 2 and int(settings.val) == 1
-            #     if id_type == 3:
-            #         ch.max_pred = int(settings.val)
+            block_url_chat = False
+            block_mat = False
+            for settings in find_all_settings(chat.id):
+                id_type = int(settings.id_type.id)
+                if id_type == 4 and int(settings.val) == 1:
+                    block_mat = True
+                if block_url_chat == 2 and int(settings.val) == 1:
+                    block_mat = True
+                if id_type == 3:
+                    ch.max_pred = int(settings.val)
+                if id_type == 5:
+                    ch.duel_kd = int(settings.val)
 
             if updateNew.get('action'):
                 if updateNew['action']['type'] == 'chat_invite_user':
@@ -78,7 +81,6 @@ while True:
                     print("kick_user or user_exit")
             else:
                 # Create Message object
-                print(updateNew)
                 send_id_message = 0
                 text = updateNew['text']
                 fwd_messages = updateNew['fwd_messages']
@@ -98,6 +100,7 @@ while True:
 
                 ch.user_id = user.id
                 print("chat: {0} user: {1}".format(chat.id, user.id))
+                print(text)
 
                 stats = find_stats_user_and_chat(user.id, chat.id)
                 stats.count_msgs = stats.count_msgs + 1
@@ -120,7 +123,6 @@ while True:
                 stats.save()
 
                 add_text(user.id, chat.id, text, attachments)
-                print("added new message in DataBase")
 
                 # if block_mat:
                 # if chat.id != 4 and mat.check_slang(text) and int(user.id) > 0:
@@ -156,4 +158,3 @@ while True:
         longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
         server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']
     ts = longPoll['ts']
-    print(ts)

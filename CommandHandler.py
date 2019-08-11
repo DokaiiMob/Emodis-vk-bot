@@ -22,6 +22,7 @@ import datetime
 
 class CommandHandler:
     chat_id = 0
+    duel_kd = 60
     peer_id = 0
     user_id = 0
     max_pred = 10
@@ -317,6 +318,9 @@ class CommandHandler:
                 if int(val) == 0 or int(val) == 1:
                     settings_set(self.chat_id, type_set, val)
                     return True
+            if type_set == 5:
+                settings_set(self.chat_id, type_set, val)
+                return True
         return False
 
     def is_admin(self):
@@ -352,9 +356,9 @@ class CommandHandler:
         return False
 
     def duel(self, chat, user, stats):
-        if chat.id != 4 and chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < 60:
+        if chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < self.duel_kd:
             self.send_msg(
-                msg="Дуэль уже состоялась, проводятся один раз в минуту")
+                msg="Дуэль уже состоялась, включен промежуток между дуэлями в {0} сек".format(self.duel_kd))
             return False
         if chat.duel_id == 0:
             self.send_msg(msg="Хорошо, @id{0} ({1}), ждем твоего оппонента...".format(
@@ -402,7 +406,7 @@ class CommandHandler:
         self.user_id = user_id
 
         if re.match('герой', text):
-            # self.get_hero()
+            self.send_msg(msg="Пока героя нет")
             return True
 
         if re.match('топ', text):
@@ -439,9 +443,9 @@ class CommandHandler:
                 self.get_duel(0)
                 return True
 
-        # if re.match('развод', text):
-        #     self.remove_married()
-        #     return True
+        if re.match('развод', text):
+            self.remove_married()
+            return True
 
         if re.match('брак', text):
             text = text.replace(text[:5], '')
@@ -458,10 +462,8 @@ class CommandHandler:
 
         if self.is_admin():
             if re.match('настройка', text):
-                self.send_msg(msg="Выключено!")
-                # kek = self.settings(text.replace(text[:10], ''))
-                # if kek:
-                #     self.send_msg(msg="Сохранено!")
+                if self.settings(text.replace(text[:10], '')):
+                    self.send_msg(msg="Сохранено!")
                 return True
 
             if re.match('исключить собачек', text):
