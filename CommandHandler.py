@@ -7,6 +7,15 @@ import requests
 import vk
 from config import GROUP_ID
 from models import *
+from objects.DataBase import *
+from objects.User import *
+from objects.Chat import *
+from objects.Marrieds import *
+from objects.Stats import *
+from objects.StatsUser import *
+from objects.Settings import *
+from objects.TypeSet import *
+from objects.Texts import *
 import locale
 import datetime
 
@@ -18,8 +27,8 @@ class CommandHandler:
     max_pred = 10
     con_msg_id = 0
 
-
     def __init__(self, api):
+        print("Init CommandHandler")
         self.api = api
 
     def set_peer_id(self, peer_id):
@@ -31,7 +40,6 @@ class CommandHandler:
             user.full_name = self.api_full_name(user.id)
             user.save()
 
-    
     def is_chat_invite_user(self, member_id):
         if member_id > 0:
             self.find_update_user(member_id)
@@ -149,9 +157,8 @@ class CommandHandler:
         try:
             if id == GROUP_ID:
                 return False
-            a = self.api.messages.removeChatUser(
+            self.api.messages.removeChatUser(
                 chat_id=self.chat_id, member_id=id)
-            print(a)
             return True
         except vk.exceptions.VkAPIError:
             self.send_msg(msg=not_access())
@@ -344,6 +351,52 @@ class CommandHandler:
             self.send_msg(msg="Дуэлей ещё не было")
         return False
 
+    def duel(self, chat, user, stats):
+        if chat.id != 4 and chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < 60:
+            self.send_msg(
+                msg="Дуэль уже состоялась, проводятся один раз в минуту")
+            return False
+        if chat.duel_id == 0:
+            self.send_msg(msg="Хорошо, @id{0} ({1}), ждем твоего оппонента...".format(
+                user.id, user.full_name))
+            chat.duel_id = user.id
+            chat.save()
+            return True
+        if chat.duel_id != user.id:
+            self.send_msg(msg="@id{0} ({1}), принял вызов!".format(
+                user.id, user.full_name))
+            if randint(0, 100) > 50:
+                user_ = find_user(chat.duel_id)
+                self.send_msg(msg="Произошла дуэль, @id{0} ({1}) падает замертво. F".format(
+                    user_.id, user_.full_name))
+                stats.count_duel_save = stats.count_duel_save + 1
+                stats.save()
+                stats_ = find_stats_addit_user_and_chat(
+                    chat.duel_id, chat.id)
+                stats_.count_duel_die = stats.count_duel_die + 1
+                stats_.save()
+            else:
+                self.send_msg(msg="Произошла дуэль, @id{0} ({1}) падает замертво. F".format(
+                    user.id, user.full_name))
+                stats.count_duel_die = stats.count_duel_die + 1
+                stats.save()
+                stats_ = find_stats_addit_user_and_chat(
+                    chat.duel_id, chat.id)
+                stats_.count_duel_save = stats.count_duel_save + 1
+                stats_.save()
+            chat.duel_id = 0
+            chat.date_last_duel = datetime.datetime.now()
+            chat.save()
+            stats.save()
+            return True
+        self.send_msg(msg="Сам себя, F")
+        chat.duel_id = 0
+        stats.count_duel_die = stats.count_duel_die + 1
+        chat.date_last_duel = datetime.datetime.now()
+        stats.save()
+        chat.save()
+        return True
+        
     def parse_command(self, text, user_id):
 
         self.user_id = user_id

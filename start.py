@@ -4,8 +4,19 @@
 import os
 from random import randint
 from requests import post
-from models import *
 from config import *
+from objects.Mat import Mat
+from models import *
+from objects.DataBase import *
+from objects.User import *
+from objects.Chat import *
+from objects.Marrieds import *
+from objects.Stats import *
+from objects.StatsUser import *
+from objects.Settings import *
+from objects.TypeSet import *
+from objects.Texts import *
+
 import random
 import vk
 import re
@@ -17,7 +28,7 @@ api = vk.API(session, v=VK_API_VERSION)
 ch = CommandHandler.CommandHandler(api)
 db = DataBase()
 reactions = Reactions()
-
+mat = Mat()
 longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
 server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']
 
@@ -31,7 +42,7 @@ while True:
         db = DataBase()
         db.open_connection()
 
-    print("while")
+    print("new LongPoll post request")
     longPoll = post('%s' % server, data={'act': 'a_check',
                                          'key': key,
                                          'ts': ts,
@@ -44,11 +55,6 @@ while True:
 
             chat = find_chat_meth(int(updateNew['peer_id'] - 2000000000))
             ch.chat_id = chat.id
-
-            # chat_data = ch.getConversationsById()
-            # if chat_data:
-            #     chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
-            #     chat.save()
 
             # settings parse
             # block_url_chat = False
@@ -77,9 +83,9 @@ while True:
                 text = updateNew['text']
                 fwd_messages = updateNew['fwd_messages']
                 reply_message = False
-                if updateNew.get('reply_message')  and len(updateNew['reply_message']) != 0:
+                if updateNew.get('reply_message') and len(updateNew['reply_message']) != 0:
                     reply_message = updateNew['reply_message']
-                
+
                 conversation_message_id = updateNew['conversation_message_id']
                 ch.con_msg_id = conversation_message_id
                 attachments = updateNew['attachments']
@@ -99,6 +105,8 @@ while True:
 
                 stats = find_stats_addit_user_and_chat(user.id, chat.id)
                 stats.len = stats.len + len(text)
+                stats.date_time_last_msg = datetime.datetime.now()
+                
 
                 # # if int(stats.is_ro) == 1:
                 # #     ch.delete_msg(conversation_message_id)
@@ -112,56 +120,14 @@ while True:
                 stats.save()
 
                 add_text(user.id, chat.id, text, attachments)
-                print("added")
+                print("added new message in DataBase")
 
                 # if block_mat:
-                # if chat.id != 4 and ch.check_slang(text) and int(user.id) > 0:
+                # if chat.id != 4 and mat.check_slang(text) and int(user.id) > 0:
                 #     ch.give_pred_by_id(user.id, "Некультурно общаемся?")
 
                 if re.match('дуэль', text.strip().lower()):
-                    if chat.id != 4 and chat.date_last_duel and (datetime.datetime.now()-chat.date_last_duel).total_seconds() < 60:
-                        ch.send_msg(
-                            msg="Дуэль уже состоялась, проводятся один раз в минуту")
-                    else:
-                        if chat.duel_id == 0:
-                            ch.send_msg(msg="Хорошо, @id{0} ({1}), ждем твоего оппонента...".format(
-                                user.id, user.full_name))
-                            chat.duel_id = user.id
-                            chat.save()
-                        else:
-                            if chat.duel_id != user.id:
-                                ch.send_msg(msg="@id{0} ({1}), принял вызов!".format(
-                                    user.id, user.full_name))
-                                if randint(0, 100) > 50:
-                                    user_ = find_user(chat.duel_id)
-                                    ch.send_msg(msg="Произошла дуэль, @id{0} ({1}) падает замертво. F".format(
-                                        user_.id, user_.full_name))
-                                    stats.count_duel_save = stats.count_duel_save + 1
-                                    stats.save()
-                                    stats_ = find_stats_addit_user_and_chat(
-                                        chat.duel_id, chat.id)
-                                    stats_.count_duel_die = stats.count_duel_die + 1
-                                    stats_.save()
-                                else:
-                                    ch.send_msg(msg="Произошла дуэль, @id{0} ({1}) падает замертво. F".format(
-                                        user.id, user.full_name))
-                                    stats.count_duel_die = stats.count_duel_die + 1
-                                    stats.save()
-                                    stats_ = find_stats_addit_user_and_chat(
-                                        chat.duel_id, chat.id)
-                                    stats_.count_duel_save = stats.count_duel_save + 1
-                                    stats_.save()
-                                chat.duel_id = 0
-                                chat.date_last_duel = datetime.datetime.now()
-                                chat.save()
-                                stats.save()
-                            else:
-                                ch.send_msg(msg="Сам себя, F")
-                                chat.duel_id = 0
-                                stats.count_duel_die = stats.count_duel_die + 1
-                                chat.date_last_duel = datetime.datetime.now()
-                                stats.save()
-                                chat.save()
+                    ch.duel(chat, user, stats)
                 else:
                     is_reaction = reactions.message_handler(text)
 
@@ -179,9 +145,12 @@ while True:
                     if not is_reaction:
                         handler = ch.parse_bot(text)
                         if handler[0]:
+                            chat_data = ch.getConversationsById()
+                            if chat_data:
+                                chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
+                                chat.save()
                             text = handler[1]
                             ch.parse_command(text, user.id)
-
     db.close_connection()
     if longPoll.get('failed'):
         longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
