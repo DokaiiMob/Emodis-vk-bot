@@ -90,6 +90,9 @@ def get_preds_db(chat_id, user_id):
 def get_bans_db(chat_id, user_id):
     return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id, StatsUser.is_banned == 1, StatsUser.id_user > 0)
 
+def get_users_by_limit(chat_id, count):
+    return StatsUser.select(StatsUser).where(StatsUser.id_chat == chat_id).order_by(StatsUser.id.desc()).limit(count)
+
 
 def find_all_users_by_msg(chat_id):
     stats = Stats.select(fn.SUM(Stats.count_msgs).alias('count_msgs'), Stats.id_user).where(

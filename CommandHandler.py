@@ -203,6 +203,10 @@ class CommandHandler:
         for user in users:
             if re.match('id', user.split('|')[0]):
                 self.remove_chat_user(user.split('|')[0].split('id')[1])
+            
+    def ban_last_users(self, count):
+        for users in get_users_by_limit(self.chat_id, count):
+            self.ban_user(users.id)
 
     def ban_user(self, id):
         id = int(id)
@@ -469,6 +473,12 @@ class CommandHandler:
             if re.match('исключить собачек', text):
                 self.dog_kick()
                 return True
+            
+            if re.match('забанить человек', text):
+                text = text.replace(text[:17], '')
+                self.ban_last_users(int(text))
+                self.send_msg(msg="Готово!")
+                return True
 
             if re.match('снять', text):
                 text = text.replace(text[:6], '')
@@ -509,5 +519,5 @@ class CommandHandler:
                 if users:
                     self.kick(users)
                 return True
-        self.send_msg(msg="Эй, я не знаю такую команду!")
+        self.send_msg(msg="Эй, я не знаю такую команду или у вас нет доступа!")
         return False
