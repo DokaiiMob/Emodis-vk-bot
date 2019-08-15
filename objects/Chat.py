@@ -1,11 +1,8 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
-from peewee import *
-from random import randint
 import datetime
-import peewee
-import re
-from objects.DataBase import *
+from peewee import PrimaryKeyField, CharField, IntegerField, DateTimeField
+from objects.DataBase import BaseModel
 
 
 class Chat(BaseModel):
@@ -37,33 +34,9 @@ def try_chat(id):
         return False
 
 
-def find_all_chats():
-    return Chat.select()
-
-
 def find_chat(id):
-    return Chat.select().where(Chat.id == id).get()
-
-
-def find_chat_meth(id):
-    exist = True
-    try:
-        chat = find_chat(id)
-    except Chat.DoesNotExist:
-        exist = False
-    if not exist:
+    chat = try_chat(id)
+    if not chat:
         add_chat(id, '')
-        chat = find_chat(id)
+        chat = try_chat(id)
     return chat
-
-
-def update_chat_name(id, new_name):
-    chat = Chat.get(Chat.id == id)
-    chat.title = new_name
-    chat.save()
-
-
-def update_chat_count(id, new_val):
-    chat = Chat.get(Chat.id == id)
-    chat.members_count = new_val
-    chat.save()

@@ -1,13 +1,10 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
-from peewee import *
-from random import randint
 import datetime
-import peewee
-import re
-from objects.DataBase import *
-from objects.User import *
-from objects.Chat import *
+from peewee import PrimaryKeyField, ForeignKeyField, DateTimeField, TextField
+from objects.DataBase import BaseModel
+from objects.User import User, try_user
+from objects.Chat import Chat, try_chat
 
 
 class Texts(BaseModel):

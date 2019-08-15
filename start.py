@@ -6,7 +6,6 @@ from random import randint
 from requests import post
 from config import *
 from objects.Mat import Mat
-from models import *
 from objects.DataBase import *
 from objects.User import *
 from objects.Chat import *
@@ -50,56 +49,35 @@ while True:
 
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
         for update in longPoll['updates']:
-            updateNew = update['object']
-            ch.peer_id = updateNew['peer_id']
+            
+            ch.peer_id = int(update['object']['peer_id'])
+            chat = find_chat(ch.peer_id - 2000000000)
+            ch.peer_id, ch.chat_id = update['object']['peer_id'], chat.id
 
-            chat = find_chat_meth(int(updateNew['peer_id'] - 2000000000))
-            ch.chat_id = chat.id
+            settings = parser_settings(chat.id)
+            block_url_chat = settings[0]
+            ch.max_pred, ch.duel_kd = settings[1], settings[3]
 
-            block_url_chat = False
-            block_mat = False
-            for settings in find_all_settings(chat.id):
-                id_type = int(settings.id_type.id)
-                if id_type == 4 and int(settings.val) == 1:
-                    block_mat = True
-                if block_url_chat == 2 and int(settings.val) == 1:
-                    block_mat = True
-                if id_type == 3:
-                    ch.max_pred = int(settings.val)
-                if id_type == 5:
-                    ch.duel_kd = int(settings.val)
+            # # Get user data from database
+            user = find_user(update['object']['from_id'])
+            if user.id > 0 and len(user.full_name) == 0:
+                user.full_name = ch.api_full_name(user.id)
+                user.save()
+            ch.user_id = user.id
+            print("chat: {0} user: {1}".format(chat.id, user.id))
 
-            if updateNew.get('action'):
-                if updateNew['action']['type'] == 'chat_invite_user':
-                    ch.is_chat_invite_user(
-                        updateNew['action']['member_id'])
-                if updateNew['action']['type'] == 'chat_invite_user_by_link':
-                    ch.is_chat_invite_user(updateNew['from_id'])
-                if updateNew['action']['type'] == 'chat_title_update':
-                    print("chat title")
-                if updateNew['action']['type'] == 'chat_kick_user':
-                    print("kick_user or user_exit")
+            if update['object'].get('action'):
+                ch.action_parser(update['object']['action'])
             else:
                 # Create Message object
-                send_id_message = 0
-                text = updateNew['text']
-                fwd_messages = updateNew['fwd_messages']
+                # update['object']['fwd_messages']
                 reply_message = False
-                if updateNew.get('reply_message') and len(updateNew['reply_message']) != 0:
-                    reply_message = updateNew['reply_message']
+                if update['object'].get('reply_message') and len(update['object']['reply_message']) != 0:
+                    reply_message = update['object']['reply_message']
 
-                conversation_message_id = updateNew['conversation_message_id']
-                ch.con_msg_id = conversation_message_id
-                attachments = updateNew['attachments']
+                text, ch.con_msg_id, attachments = update['object']['text'], update['object'][
+                    'conversation_message_id'], update['object']['attachments']
 
-                # # Get user data from database
-                user = find_user(updateNew['from_id'])
-                if user.id > 0 and len(user.full_name) == 0:
-                    user.full_name = ch.api_full_name(user.id)
-                    user.save()
-
-                ch.user_id = user.id
-                print("chat: {0} user: {1}".format(chat.id, user.id))
                 print(text)
 
                 stats = find_stats_user_and_chat(user.id, chat.id)
@@ -109,10 +87,8 @@ while True:
                 stats = find_stats_addit_user_and_chat(user.id, chat.id)
                 stats.len = stats.len + len(text)
                 stats.date_time_last_msg = datetime.datetime.now()
-                
-
-                # # if int(stats.is_ro) == 1:
-                # #     ch.delete_msg(conversation_message_id)
+                if int(stats.is_ro) == 1:
+                    ch.delete_msg(ch.con_msg_id)
 
                 new_lvl = ch.get_need_lvl(stats.lvl)
                 if new_lvl != stats.lvl:
@@ -124,8 +100,8 @@ while True:
 
                 add_text(user.id, chat.id, text, attachments)
 
-                # if block_mat:
-                # if chat.id != 4 and mat.check_slang(text) and int(user.id) > 0:
+                # if settings[2]:
+                # if mat.check_slang(text) and int(user.id) > 0:
                 #     ch.give_pred_by_id(user.id, "Некультурно общаемся?")
 
                 if re.match('дуэль', text.strip().lower()):

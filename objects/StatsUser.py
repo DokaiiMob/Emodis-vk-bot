@@ -1,14 +1,11 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
-
-from peewee import *
-from random import randint
 import datetime
-import peewee
-from objects.DataBase import *
-from objects.User import *
-from objects.Chat import *
-from objects.Stats import *
+from peewee import fn, PrimaryKeyField, ForeignKeyField, DateTimeField, IntegerField
+from objects.DataBase import BaseModel
+from objects.User import User, try_user, add_user, find_user
+from objects.Chat import Chat, try_chat
+from objects.Stats import Stats
 
 
 class StatsUser(BaseModel):
@@ -102,8 +99,8 @@ def find_all_users_by_msg(chat_id):
     for stat in stats:
         user_data = StatsUser.select().where(
             StatsUser.id_chat == chat_id, StatsUser.id_user == stat.id_user).get()
-        msg += "#{0} {1} {2} сообщений, {3} ур.\n".format(index,
-                                                          find_user(stat.id_user).full_name, stat.count_msgs, user_data.lvl)
+        msg += "#{0} {1} {2} сообщ., {3} уровень\n".format(index,
+                                                          stat.id_user.full_name, stat.count_msgs, user_data.lvl)
         index = index + 1
 
     msg += "Остальная статистика: kanbase.ru/c/{0}".format(chat_id)

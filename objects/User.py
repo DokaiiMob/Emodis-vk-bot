@@ -1,11 +1,8 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
-from peewee import *
-from random import randint
 import datetime
-import peewee
-import re
-from objects.DataBase import *
+from peewee import PrimaryKeyField, CharField, IntegerField, DateTimeField
+from objects.DataBase import BaseModel
 
 
 class User(BaseModel):
@@ -32,17 +29,9 @@ def try_user(id):
         return False
 
 
-def find_all_users():
-    return User.select()
-
-
 def find_user(id):
-    exist = True
-    try:
-        user = User.select().where(User.id == id).get()
-        return user
-    except User.DoesNotExist:
-        exist = False
-    if not exist:
-        add_user(id, " ")
-        return User.select().where(User.id == id).get()
+    user = try_user(id)
+    if not user:
+        add_user(id, '')
+        user = try_user(id)
+    return user

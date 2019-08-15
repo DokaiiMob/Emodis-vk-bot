@@ -6,7 +6,6 @@ import re
 import requests
 import vk
 from config import GROUP_ID
-from models import *
 from objects.DataBase import *
 from objects.User import *
 from objects.Chat import *
@@ -41,21 +40,35 @@ class CommandHandler:
             user.full_name = self.api_full_name(user.id)
             user.save()
 
+    def action_parser(self, action):
+        if action['type'] == 'chat_invite_user':
+            self.is_chat_invite_user(action['member_id'])
+        if action['type'] == 'chat_invite_user_by_link':
+            self.is_chat_invite_user(self.user_id)
+        if action['type'] == 'chat_title_update':
+            print("chat title")
+        if action['type'] == 'chat_kick_user':
+            print("kick_user or user_exit")
+
     def is_chat_invite_user(self, member_id):
         if member_id > 0:
             self.find_update_user(member_id)
             stats = find_stats_addit_user_and_chat(member_id, self.chat_id)
             if stats.is_banned == 1:
                 self.remove_chat_user(member_id)
-
+            return True
         if member_id < 0:
             print("Here adding to chat another bot")
         if member_id == -GROUP_ID:
             try:
                 for chat_user in self.getConversationMembers():
                     self.find_update_user(chat_user['from_id'])
+                self.send_msg(
+                    msg="Привет, {0} &#128521; Рекомендуем администратору беседы зайти на сайт".format(self.peer_id))
             except vk.exceptions.VkAPIError:
-                self.send_msg(msg=get_hello(self.peer_id))
+                self.send_msg(
+                    msg="Привет, {0} &#128521; Рекомендуем выдать доступ к переписке!".format(self.peer_id))
+                return True
 
     def api_full_name(self, user_id):
         name = self.api.users.get(user_ids=user_id)[0]
@@ -122,7 +135,8 @@ class CommandHandler:
             array[randint(0, len(array) - 1)]))
 
     def get_inform(self):
-        self.send_msg(msg=get_random())
+        self.send_msg(
+            msg="Вероятность составляет {0}%".format(randint(0, 100)))
 
     def get_preds(self):
         exist = False
@@ -162,7 +176,7 @@ class CommandHandler:
                 chat_id=self.chat_id, member_id=id)
             return True
         except vk.exceptions.VkAPIError:
-            self.send_msg(msg=not_access())
+            self.send_msg(msg='По какой-то причине нет доступа :(')
             return False
 
     def give_pred_by_id(self, user_id, msg):
@@ -203,7 +217,7 @@ class CommandHandler:
         for user in users:
             if re.match('id', user.split('|')[0]):
                 self.remove_chat_user(user.split('|')[0].split('id')[1])
-            
+
     def ban_last_users(self, count):
         for users in get_users_by_limit(self.chat_id, count):
             self.ban_user(users.id)
@@ -254,9 +268,9 @@ class CommandHandler:
                 if self.remove_chat_user(chat_user['id']):
                     dog_exist = True
         if not dog_exist:
-            self.send_msg(msg=get_delete_dogs_not())
+            self.send_msg(msg="Собачек нет!")
         else:
-            self.send_msg(msg=get_delete_dogs())
+            self.send_msg(msg="Собачек больше нет!")
 
     def get_need_lvl(self, old):
         all_count_msgs = find_all_stats_sum(
@@ -404,7 +418,7 @@ class CommandHandler:
         stats.save()
         chat.save()
         return True
-        
+
     def parse_command(self, text, user_id):
 
         self.user_id = user_id
@@ -473,7 +487,7 @@ class CommandHandler:
             if re.match('исключить собачек', text):
                 self.dog_kick()
                 return True
-            
+
             if re.match('забанить человек', text):
                 text = text.replace(text[:17], '')
                 self.ban_last_users(int(text))

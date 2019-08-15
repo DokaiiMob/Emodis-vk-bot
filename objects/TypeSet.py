@@ -1,12 +1,7 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
-
-from peewee import *
-from random import randint
-import datetime
-import peewee
-import re
-from objects.DataBase import *
+from peewee import PrimaryKeyField, TextField
+from objects.DataBase import BaseModel
 
 
 class TypeSet(BaseModel):
@@ -28,4 +23,3 @@ def find_all_type_set():
             'default_val': _type.default_val,
         })
     return types
-

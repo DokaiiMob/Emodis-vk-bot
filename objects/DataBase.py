@@ -1,9 +1,8 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
 
-from config import *
+from config import DB_USER, DB_NAME, DB_PASS, DB_HOST
 from peewee import *
-import peewee
 
 
 class DataBase():

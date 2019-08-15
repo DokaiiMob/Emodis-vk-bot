@@ -1,13 +1,9 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
-from peewee import *
-from random import randint
-import datetime
-import peewee
-import re
-from objects.DataBase import *
-from objects.TypeSet import *
-from objects.Chat import *
+from peewee import PrimaryKeyField, ForeignKeyField, TextField, JOIN
+from objects.DataBase import BaseModel
+from objects.TypeSet import TypeSet
+from objects.Chat import Chat, try_chat
 
 
 class Settings(BaseModel):
@@ -51,9 +47,29 @@ def find_all_settings(id_chat):
                         null_settigs.get('default_val'))
     return Settings.select().where(Settings.id_chat == id_chat)
 
-
 def settings_set(chat_id, id_type, val):
     settings = Settings.get(Settings.id_chat == chat_id,
                             Settings.id_type == id_type)
     settings.val = val
     settings.save()
+
+def parser_settings(id_chat):
+    block_mat = False
+    block_url_chat = False
+    max_pred = 3
+    duel_kd = 5
+    for settings in find_all_settings(id_chat):
+        id_type = int(settings.id_type.id)
+        # Ссылки на чужие команды
+        if id_type == 2 and int(settings.val) == 1:
+            block_url_chat = True
+        # Задать количество предупреждений
+        if id_type == 3:
+            max_pred = int(settings.val)
+        # Фильтр мата
+        if id_type == 4 and int(settings.val) == 1:
+            block_mat = True
+        # Ограничение на дуэль, в секундах
+        if id_type == 5:
+            duel_kd = int(settings.val)
+    return block_url_chat, max_pred, block_mat, duel_kd
