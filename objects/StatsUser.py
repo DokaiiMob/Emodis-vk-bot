@@ -3,7 +3,7 @@
 import datetime
 from peewee import fn, PrimaryKeyField, ForeignKeyField, DateTimeField, IntegerField
 from objects.DataBase import BaseModel
-from objects.User import User, try_user, add_user, find_user
+from objects.User import User, try_user, add_user
 from objects.Chat import Chat, try_chat
 from objects.Stats import Stats
 
