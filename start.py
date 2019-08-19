@@ -49,7 +49,6 @@ while True:
 
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
         for update in longPoll['updates']:
-            
             ch.peer_id = int(update['object']['peer_id'])
             chat = find_chat(ch.peer_id - 2000000000)
             ch.peer_id, ch.chat_id = update['object']['peer_id'], chat.id
@@ -81,7 +80,18 @@ while True:
                 print(text)
 
                 stats = find_stats_user_and_chat(user.id, chat.id)
-                stats.count_msgs = stats.count_msgs + 1
+
+                isAttach = False
+                if len(attachments) > 0:
+                    if attachments[0]['type'] == 'sticker':
+                        stats.count_stickers = stats.count_msgs + 1
+                        isAttach = True
+                    if attachments[0]['type'] == 'audio_message':
+                        stats.count_audio = stats.count_audio + 1
+                        isAttach = True
+
+                if isAttach:
+                    stats.count_msgs = stats.count_msgs + 1
                 stats.save()
 
                 stats = find_stats_addit_user_and_chat(user.id, chat.id)
