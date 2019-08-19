@@ -126,7 +126,7 @@ class CommandHandler:
         return users
 
     def get_top(self):
-        self.send_msg(msg="Статистика: kanbase.ru/c/{0}".format((self.chat_id*150)%260))
+        self.send_msg(msg="Статистика: kanbase.ru/c/{0}".format((self.chat_id*0x45785)))
 
     def get_choise(self, text):
         msg = text.replace(text[:6], '')
