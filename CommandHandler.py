@@ -186,8 +186,8 @@ class CommandHandler:
         if int(stats.is_pred) >= int(self.max_pred):
             # По сути надо выбирать что делать роботу
             # stats.is_banned = 1
-            # stats.is_pred = 0
-            # self.send_msg(msg="Лимит предупреждений! Кик :-)")
+            stats.is_pred = 0
+            self.send_msg(msg="Лимит предупреждений! Кик :-)")
             # И парсить максимальное кол-во
             self.remove_chat_user(user_id)
         self.send_msg(msg="{0} Предупреждение {1} из {2}".format(
