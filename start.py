@@ -111,8 +111,8 @@ while True:
                 add_text(user.id, chat.id, text, attachments)
 
                 if settings[2]:
-                if mat.check_slang(text) and int(user.id) > 0:
-                    ch.give_pred_by_id(user.id, "Некультурно общаемся?")
+                    if mat.check_slang(text) and int(user.id) > 0:
+                        ch.give_pred_by_id(user.id, "Некультурно общаемся?")
 
                 if re.match('дуэль', text.strip().lower()):
                     ch.duel(chat, user, stats)
