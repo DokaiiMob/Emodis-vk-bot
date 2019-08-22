@@ -126,7 +126,8 @@ class CommandHandler:
         return users
 
     def get_top(self):
-        self.send_msg(msg="Статистика: kanbase.ru/c/{0}".format((self.chat_id*0x45785)))
+        self.send_msg(
+            msg="Статистика: kanbase.ru/c/{0}".format((self.chat_id*0x45785)))
 
     def get_choise(self, text):
         msg = text.replace(text[:6], '')
@@ -183,6 +184,8 @@ class CommandHandler:
         stats = find_stats_addit_user_and_chat(user_id, self.chat_id)
         stats.is_pred = stats.is_pred + 1
         stats.save()
+        self.send_msg(msg="{0} Предупреждение {1} из {2}".format(
+            msg, stats.is_pred, self.max_pred))
         if int(stats.is_pred) >= int(self.max_pred):
             # По сути надо выбирать что делать роботу
             # stats.is_banned = 1
@@ -190,8 +193,6 @@ class CommandHandler:
             self.send_msg(msg="Лимит предупреждений! Кик :-)")
             # И парсить максимальное кол-во
             self.remove_chat_user(user_id)
-        self.send_msg(msg="{0} Предупреждение {1} из {2}".format(
-            msg, stats.is_pred, self.max_pred))
 
     def pred_user(self, id):
         id = int(id)
