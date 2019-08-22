@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-import peewee.OperationalError
+import peewee
 from random import randint
 from requests import post
 from config import *
