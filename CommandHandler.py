@@ -95,6 +95,27 @@ class CommandHandler:
         except vk.exceptions.VkAPIError:
             return False
 
+    def update_user_data(self, from_id):
+        user = find_user(from_id)
+        now = datetime.datetime.now()
+        timestamp = datetime.datetime.timestamp(now)
+        if user.cache_repeat + 13600 < timestamp and user.id > 0:
+            user.full_name = self.api_full_name(user.id)
+            user.cache_repeat = timestamp
+            user.save()
+        self.user_id = user.id
+        return user
+
+    def update_chat_data(self, chat):
+        now = datetime.datetime.now()
+        timestamp = datetime.datetime.timestamp(now)
+        if chat.cache_repeat + 3600 < timestamp:
+            chat_data = self.getConversationsById()
+            if chat_data:
+                chat.title, chat.members_count, chat.cache_repeat = chat_data[
+                    'title'], chat_data['members_count'], timestamp
+                chat.save()
+
     def getConversationMembers(self):
         return self.api.messages.getConversationMembers(peer_id=self.peer_id, group_id=GROUP_ID)['profiles']
 
@@ -111,10 +132,10 @@ class CommandHandler:
         if re.match('работяга', text.lower()):
             text = text.replace(text[:9], '')
             return True, text.strip()
-        if re.match("\[club183796256\|\@emodis\],", text.lower()):
+        if re.match("\[club183796256\|\@kanbase\],", text.lower()):
             text = text.replace(text[:24], '')
             return True, text.strip()
-        if re.match("\[club183796256\|\@emodis\]", text.lower()):
+        if re.match("\[club183796256\|\@kanbase\]", text.lower()):
             text = text.replace(text[:23], '')
             return True, text.strip()
         return False, text

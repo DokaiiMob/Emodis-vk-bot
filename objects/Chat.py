@@ -13,6 +13,7 @@ class Chat(BaseModel):
     duel_id = IntegerField(null=False, default=0)
     date_last_duel = DateTimeField(
         default=datetime.datetime.now())
+    cache_repeat = IntegerField(null=False, default=0)
 
     class Meta:
         db_table = "chats"

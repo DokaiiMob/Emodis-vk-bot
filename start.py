@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import peewee
 from random import randint
 from requests import post
 from config import *
@@ -16,12 +15,13 @@ from objects.StatsUser import *
 from objects.Settings import *
 from objects.TypeSet import *
 from objects.Texts import *
+from reactions import Reactions
 
 import random
 import vk
 import re
 import CommandHandler
-from reactions import Reactions
+import peewee
 
 session = vk.Session(access_token=VK_API_ACCESS_TOKEN)
 api = vk.API(session, v=VK_API_VERSION)
@@ -53,17 +53,14 @@ while True:
             ch.peer_id = int(update['object']['peer_id'])
             chat = find_chat(ch.peer_id - 2000000000)
             ch.peer_id, ch.chat_id = update['object']['peer_id'], chat.id
+            ch.update_chat_data(chat)
 
             settings = parser_settings(chat.id)
             block_url_chat = settings[0]
             ch.max_pred, ch.duel_kd = settings[1], settings[3]
 
             # # Get user data from database
-            user = find_user(update['object']['from_id'])
-            if user.id > 0 and len(user.full_name) == 0:
-                user.full_name = ch.api_full_name(user.id)
-                user.save()
-            ch.user_id = user.id
+            user = ch.update_user_data(update['object']['from_id'])
             print("chat: {0} user: {1}".format(chat.id, user.id))
 
             if update['object'].get('action'):
@@ -71,6 +68,7 @@ while True:
             else:
                 # Create Message object
                 # update['object']['fwd_messages']
+
                 reply_message = False
                 if update['object'].get('reply_message') and len(update['object']['reply_message']) != 0:
                     reply_message = update['object']['reply_message']
@@ -91,7 +89,7 @@ while True:
                         stats.count_audio = stats.count_audio + 1
                         isAttach = True
 
-                if isAttach:
+                if not isAttach:
                     stats.count_msgs = stats.count_msgs + 1
                 stats.save()
 
@@ -134,10 +132,6 @@ while True:
                     if not is_reaction:
                         handler = ch.parse_bot(text)
                         if handler[0]:
-                            chat_data = ch.getConversationsById()
-                            if chat_data:
-                                chat.title, chat.members_count = chat_data['title'], chat_data['members_count']
-                                chat.save()
                             text = handler[1]
                             ch.parse_command(text, user.id)
     db.close_connection()

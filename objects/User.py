@@ -8,6 +8,7 @@ from objects.DataBase import BaseModel
 class User(BaseModel):
     id = PrimaryKeyField(null=False)
     full_name = CharField(max_length=100)
+    cache_repeat = IntegerField(null=False, default=0)
 
     class Meta:
         db_table = "users"
