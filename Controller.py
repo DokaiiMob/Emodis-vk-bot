@@ -1,0 +1,203 @@
+# /usr/bin/env python3.7
+# -*- coding: utf-8 -*-
+from random import randint
+import re
+import requests
+import vk
+from config import GROUP_ID
+from objects.User import *
+from objects.Chat import *
+from objects.Marrieds import *
+from objects.Stats import *
+from objects.StatsUser import *
+from objects.Settings import *
+from objects.TypeSet import *
+from objects.Texts import *
+import locale
+import datetime
+from Actions import Actions
+from reactions import Reactions
+from objects.Mat import Mat
+
+
+class Controller:
+    def __init__(self):
+        print("Controller init")
+        self.reactions = Reactions()
+        self.actions = Actions()
+        self.mat = Mat()
+        self.mini_request_for_reply = {
+            "бан": self.actions.ban_user, "пред": self.actions.pred_user, "кик": self.actions.remove_chat_user}
+        self.d = {'герой': {"actions": self.actions.get_hero},
+                  'топ': {"actions": self.actions.get_top},
+                  'все преды': {"actions": self.actions.get_all_list, "params": ["pred"]},
+                  'все баны': {"actions": self.actions.get_all_list, "params": ["ban"]},
+                  'все браки': {"actions": self.actions.get_all_marry},
+                  'все победители': {"actions": self.actions.get_duel_stats, "params": [0]},
+                  'все F': {"actions": self.actions.get_duel_stats, "params": [1]},
+                  'развод': {"actions": self.actions.remove_married},
+                  'брак нет': {"actions": self.actions.delete_married},
+                  'брак да': {"actions": self.actions.save_married},
+                  'брак': {"actions": self.actions.get_married, "params": [self.get_text], },
+
+                  'выбери': {"actions": self.actions.get_choise, "params": [self.get_text]},
+                  'инфа': {"actions": self.actions.get_inform},
+
+                  'настройка': {"actions": self.actions.settings, "params": [self.get_text], "admin": True},
+                  'забанить человек': {"actions": self.actions.ban_last_users, "params": [self.get_text], "admin": True},
+                  'исключить собачек': {"actions": self.actions.dog_kick, "admin": True},
+                  'бан': {"actions": self.actions.ban_users, "params": [self.get_text], "admin": True},
+                  'кик': {"actions": self.actions.kik_users, "params": [self.get_text], "admin": True},
+                  'пред': {"actions": self.actions.pred_users, "params": [self.get_text], "admin": True},
+                  'ро': {"actions": self.actions.ro_users, "params": [self.get_text], "admin": True},
+                  'снять бан': {"actions": self.actions.unban_users, "params": [self.get_text], "admin": True},
+                  'снять пред': {"actions": self.actions.unpred_users, "params": [self.get_text], "admin": True},
+                  'снять ро': {"actions": self.actions.unro_users, "params": [self.get_text], "admin": True},
+                  }
+
+    def get_text(self):
+        return self.text
+
+    def update_temp_data(self, chat, user, update_object):
+        self.peer_id = update_object['peer_id']
+        self.chat = []
+        self.chat = self.actions.update_chat_data(chat)
+        self.user = user
+        self.settings = parser_settings(chat.id)
+        print("chat: {0} user: {1}".format(chat.id, user.id))
+        self.reply_message = False
+        if update_object.get('reply_message') and len(update_object['reply_message']) != 0:
+            self.reply_message = update_object['reply_message']
+        self.attachments = update_object['attachments']
+        self.text = update_object['text']
+        self.actions.update_temp_data(
+            self.user.id, self.chat.id, self.peer_id, self.settings[1])
+
+    def update_user_stats(self):
+        stats = find_stats_user_and_chat(self.user.id, self.chat.id)
+        isAttach = False
+        if len(self.attachments) > 0:
+            if self.attachments[0]['type'] == 'sticker':
+                stats.count_stickers = stats.count_msgs + 1
+                isAttach = True
+            if self.attachments[0]['type'] == 'audio_message':
+                stats.count_audio = stats.count_audio + 1
+                isAttach = True
+        if not isAttach:
+            stats.count_msgs = stats.count_msgs + 1
+        stats.save()
+
+        stats = find_stats_addit_user_and_chat(self.user.id, self.chat.id)
+        stats.len = stats.len + len(self.text)
+        stats.date_time_last_msg = datetime.datetime.now()
+
+        stats.lvl = self.update_level_msg(stats.lvl)
+        stats.save()
+
+    def update_level_msg(self, old):
+        new_lvl = self.actions.get_need_lvl(old)
+        if new_lvl != old:
+            old = new_lvl
+            if new_lvl > 1 and int(self.user.id) > 0:
+                self.actions.send_msg(msg="@id{0} ({1}) получает {2} уровень!".format(
+                    self.user.id, self.user.full_name, new_lvl))
+        return old
+
+    def add_text(self):
+        add_text(self.user.id, self.chat.id, self.text, self.attachments)
+
+    def get_reaction(self):
+        reaction = self.reactions.message_handler(self.text)
+        if reaction:
+            self.actions.send_msg(msg=reaction)
+
+    def get_is_admin(self):
+        self.is_admin = self.actions.is_admin()
+
+    def is_mini_request_for_reply(self):
+        if self.mini_request_for_reply.get(self.text.lower()):
+            self.mini_request_for_reply[self.text.lower()](
+                self.reply_message.get('from_id'))
+
+    def is_request_bot(self):
+        if len(self.text) == 0:
+            return False
+        text = re.sub(
+            r'^(бот|работяга|\[club183796256\|\@kanbase\])(\s)?(,)?\s', '', self.text, flags=re.IGNORECASE)
+        if len(text) < len(self.text):
+            # убрать начальный текст
+            self.text = text
+            return True
+        return False
+
+    def parse_command(self):
+        self.get_is_admin()  # сделать кэш
+        for command in self.d:
+            if re.match(command, self.text):
+                self.text = self.text.replace(self.text[:len(command)], '')
+
+                if self.d[command].get("params") and len(self.d[command]['params']) != 0:
+                    if self.d[command].get("admin") and not self.is_admin:
+                        self.actions.send_msg(
+                            msg="Хм... Мне кажется, у вас вас нет доступа")
+                        return False
+                    self.d[command]["actions"](self.d[command]['params'][0])
+                    return True
+                else:
+                    self.d[command]["actions"]()
+                    return True
+
+        self.actions.send_msg(
+            msg="Мне кажется, я не знаю эту команду...")
+
+    def update_user(self, from_id):
+        return self.actions.update_user_data(from_id)
+
+    def action_parser(self, action):
+        if action['type'] == 'chat_invite_user':
+            self.actions.is_chat_invite_user(action['member_id'])
+        if action['type'] == 'chat_invite_user_by_link':
+            self.actions.is_chat_invite_user(self.user.id)
+        if action['type'] == 'chat_title_update':
+            print("chat title")
+        if action['type'] == 'chat_kick_user':
+            print("kick_user or user_exit")
+
+    def date_duel_kd(self, sec):
+        if sec > 60:
+            return str(sec/60) + " мин"
+        else:
+            return str(sec) + " сек"
+
+    def duel(self):
+        if self.text.lower() != "дуэль":
+            return False
+        if self.chat.date_last_duel and (datetime.datetime.now()-self.chat.date_last_duel).total_seconds() < self.settings[3]:
+            self.actions.send_msg(
+                msg="Дуэль уже состоялась, включен промежуток между дуэлями в {0}".format(self.date_duel_kd(self.settings[3])))
+            return False
+        if self.chat.duel_id == 0:
+            self.actions.send_msg(
+                msg="Хорошо, {0}, ждем твоего оппонента...".format(self.user.full_name))
+            self.chat.duel_id = self.user.id
+            self.chat.save()
+            return True
+        if self.chat.duel_id != self.user.id:
+            self.actions.send_msg(
+                msg="{0}, принял(-а) вызов!".format(self.user.full_name))
+            if randint(0, 100) > 50:
+                user_ = find_user(self.chat.duel_id)
+                self.actions.send_msg(
+                    msg="Произошла дуэль, {0} падает замертво. F".format(user_.full_name))
+            else:
+                self.actions.send_msg(
+                    msg="Произошла дуэль, {0} падает замертво. F".format(self.user.full_name))
+            self.chat.duel_id = 0
+            self.chat.date_last_duel = datetime.datetime.now()
+            self.chat.save()
+            return True
+        self.actions.send_msg(msg="Сам себя, F")
+        self.chat.duel_id = 0
+        self.chat.date_last_duel = datetime.datetime.now()
+        self.chat.save()
+        return True
