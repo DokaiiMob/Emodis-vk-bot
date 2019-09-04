@@ -3,7 +3,7 @@
 
 from config import DB_USER, DB_NAME, DB_PASS, DB_HOST
 from peewee import *
-
+import peewee
 
 class DataBase():
     dbhandle = MySQLDatabase(

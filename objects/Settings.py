@@ -47,11 +47,13 @@ def find_all_settings(id_chat):
                         null_settigs.get('default_val'))
     return Settings.select().where(Settings.id_chat == id_chat)
 
+
 def settings_set(chat_id, id_type, val):
     settings = Settings.get(Settings.id_chat == chat_id,
                             Settings.id_type == id_type)
     settings.val = val
     settings.save()
+
 
 def parser_settings(id_chat):
     block_mat = False
@@ -73,3 +75,29 @@ def parser_settings(id_chat):
         if id_type == 5:
             duel_kd = int(settings.val)
     return block_url_chat, max_pred, block_mat, duel_kd
+
+
+def settings(self, text):
+    text_array = text.split(' ')
+    if len(text_array) >= 2:
+        type_set = int(text_array[0])
+        val = text_array[1]
+        if type_set == 1:
+            if int(val) == 0 or int(val) == 1:
+                settings_set(self.chat_id, type_set, val)
+                return True
+        if type_set == 2:
+            if int(val) == 0 or int(val) == 1:
+                settings_set(self.chat_id, type_set, val)
+                return True
+        if type_set == 3:
+            settings_set(self.chat_id, type_set, val)
+            return True
+        if type_set == 4:
+            if int(val) == 0 or int(val) == 1:
+                settings_set(self.chat_id, type_set, val)
+                return True
+        if type_set == 5:
+            settings_set(self.chat_id, type_set, val)
+            return True
+    return False
