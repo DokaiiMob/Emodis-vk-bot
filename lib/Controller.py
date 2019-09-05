@@ -5,19 +5,19 @@ import re
 import requests
 import vk
 from config import GROUP_ID
-from objects.User import *
-from objects.Chat import *
-from objects.Marrieds import *
-from objects.Stats import *
-from objects.StatsUser import *
-from objects.Settings import *
-from objects.TypeSet import *
-from objects.Texts import *
+from models.User import add_user, try_user, find_user
+from models.Chat import add_chat, try_chat, find_chat
+from models.Marrieds import add_marrieds, done_marry, del_marry_all, del_marry, get_marryieds
+from models.Stats import add_stats, find_all_stats_sum, find_all_stats_by_datetime, find_stats_user_and_chat
+from models.StatsUser import add_stats_user, get_duel_die, get_duel_save, find_all_stats_user, find_stats_addit_user_and_chat, get_preds_db, get_bans_db, get_users_by_limit, find_all_users_by_msg
+from models.Settings import add_set_default, get_null_settings, find_all_settings, settings_set, parser_settings, settings
+from models.TypeSet import find_all_type_set
+from models.Texts import add_text
 import locale
 import datetime
-from Actions import Actions
-from reactions import Reactions
-from objects.Mat import Mat
+from lib.Actions import Actions
+from lib.reactions import Reactions
+from lib.Mat import Mat
 
 
 class Controller:
@@ -46,13 +46,13 @@ class Controller:
                   'настройка': {"actions": self.actions.settings, "params": [self.get_text], "admin": True},
                   'забанить человек': {"actions": self.actions.ban_last_users, "params": [self.get_text], "admin": True},
                   'исключить собачек': {"actions": self.actions.dog_kick, "admin": True},
-                  'бан': {"actions": self.actions.ban_users, "params": [self.get_text], "admin": True},
-                  'кик': {"actions": self.actions.kik_users, "params": [self.get_text], "admin": True},
-                  'пред': {"actions": self.actions.pred_users, "params": [self.get_text], "admin": True},
-                  'ро': {"actions": self.actions.ro_users, "params": [self.get_text], "admin": True},
-                  'снять бан': {"actions": self.actions.unban_users, "params": [self.get_text], "admin": True},
-                  'снять пред': {"actions": self.actions.unpred_users, "params": [self.get_text], "admin": True},
-                  'снять ро': {"actions": self.actions.unro_users, "params": [self.get_text], "admin": True},
+                  'бан': {"actions": self.actions.ban_kick_pred_users, "params": [self.get_text, "ban"], "admin": True},
+                  'кик': {"actions": self.actions.ban_kick_pred_users, "params": [self.get_text, "kick"], "admin": True},
+                  'пред': {"actions": self.actions.ban_kick_pred_users, "params": [self.get_text, "pred"], "admin": True},
+                  'ро': {"actions": self.actions.ban_kick_pred_users, "params": [self.get_text, "ro"], "admin": True},
+                  'снять бан': {"actions": self.actions.un_users, "params": [self.get_text], "admin": True},
+                  'снять пред': {"actions": self.actions.un_users, "params": [self.get_text], "admin": True},
+                  'снять ро': {"actions": self.actions.un_users, "params": [self.get_text], "admin": True},
                   }
 
     def get_text(self):
@@ -139,9 +139,14 @@ class Controller:
                 if self.d[command].get("params") and len(self.d[command]['params']) != 0:
                     if self.d[command].get("admin") and not self.is_admin:
                         self.actions.send_msg(
-                            msg="Хм... Мне кажется, у вас вас нет доступа")
+                            msg="Хм... Мне кажется, у меня нет прав администратора в этой беседе или команду вызвал обычный пользователь...")
                         return False
-                    self.d[command]["actions"](self.d[command]['params'][0])
+                    if len(self.d[command]['params']) > 1:
+                        self.d[command]["actions"](
+                            self.d[command]['params'][0], self.d[command]['params'][1])
+                    else:
+                        self.d[command]["actions"](
+                            self.d[command]['params'][0])
                     return True
                 else:
                     self.d[command]["actions"]()

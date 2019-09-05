@@ -5,16 +5,16 @@ import vk
 import re
 import requests
 from config import GROUP_ID
-from objects.DataBase import *
-from objects.User import *
-from objects.Chat import *
-from objects.Marrieds import *
-from objects.Stats import *
-from objects.StatsUser import *
-from objects.Settings import *
-from objects.TypeSet import *
-from objects.Texts import *
-import Requests
+# from objects.DataBase import *
+from models.User import add_user, try_user, find_user
+from models.Chat import add_chat, try_chat, find_chat
+from models.Marrieds import add_marrieds, done_marry, del_marry_all, del_marry, get_marryieds
+from models.Stats import add_stats, find_all_stats_sum, find_all_stats_by_datetime, find_stats_user_and_chat
+from models.StatsUser import add_stats_user, get_duel_die, get_duel_save, find_all_stats_user, find_stats_addit_user_and_chat, get_preds_db, get_bans_db, get_users_by_limit, find_all_users_by_msg
+from models.Settings import add_set_default, get_null_settings, find_all_settings, settings_set, parser_settings, settings
+from models.TypeSet import find_all_type_set
+from models.Texts import add_text
+from lib.Requests import Requests
 import locale
 import datetime
 # Объект действий робота
@@ -25,7 +25,7 @@ class Actions:
 
     def __init__(self):
         print("Actions init")
-        self.requests = Requests.Requests()
+        self.requests = Requests()
 
     def update_temp_data(self, user_id, chat_id, peer_id, max_pred):
         self.is_ban_or_kik = False
@@ -55,7 +55,7 @@ class Actions:
             stats.is_pred, self.max_pred))
 
     def remove_chat_user(self, id):
-        self.requests.remove_chat_user(id)
+        return self.requests.remove_chat_user(id)
 
     def send_msg(self, msg):
         self.requests.send_msg(msg)
@@ -69,16 +69,12 @@ class Actions:
             return old
 
     def is_admin(self):
-        try:
-            chat_users = self.requests.api.messages.getConversationMembers(
-                peer_id=self.peer_id, group_id=GROUP_ID)['items']
-            for chat_user in chat_users:
+        chat_users = self.requests.getConversationMembers()
+        if chat_users:
+            for chat_user in chat_users['items']:
                 if self.user_id == chat_user['member_id'] and chat_user.get('is_admin'):
                     return True
-        except vk.exceptions.VkAPIError:
-            return False
         return False
-    # def get_api_full_name(self)
 
     def update_user_data(self, from_id):
         self.from_id = from_id
@@ -107,16 +103,17 @@ class Actions:
         return chat
 
     def bot_come_to_chat(self):
-        exist = False
-        for chat_user in self.requests.getConversationMembers():
-            exist = True
-            self.requests.find_update_user(chat_user['from_id'])
-        if exist:
-            self.requests.send_msg(
-                msg="Привет, чат №{0} &#128521; Рекомендуем администратору беседы зайти на сайт".format(self.chat_id))
-        else:
+        members = self.requests.getConversationMembers()
+        if not members:
             self.requests.send_msg(
                 msg="Привет, чат №{0} &#128521; Рекомендуем выдать доступ к переписке!".format(self.peer_id))
+            return True
+        for chat_user in members['profiles']:
+            self.requests.find_update_user(chat_user['from_id'])
+
+        self.requests.send_msg(
+            msg="Привет, чат №{0} &#128521; Напиши: Работяга помощь".format(self.chat_id))
+        return True
 
     def is_chat_invite_user(self, member_id):
         if member_id > 0:
@@ -271,78 +268,50 @@ class Actions:
         return True
 
     def dog_kick(self):
-        for chat_user in self.requests.api.messages.getConversationMembers(peer_id=self.peer_id, group_id=GROUP_ID)['profiles']:
-            dog_exist = False
-            if chat_user.get('deactivated'):
-                if self.remove_chat_user(chat_user['id']):
-                    dog_exist = True
-        if not dog_exist:
-            self.requests.send_msg(msg="Собачек нет!")
-        else:
-            self.requests.send_msg(msg="Собачек больше нет!")
+        users = self.requests.getConversationMembers()
+        if users:
+            for chat_user in users['profiles']:
+                dog_exist = False
+                if chat_user.get('deactivated'):
+                    if self.remove_chat_user(chat_user['id']):
+                        dog_exist = True
+            if not dog_exist:
+                self.requests.send_msg(msg="Собачек нет!")
+            else:
+                self.requests.send_msg(msg="Собачек больше нет!")
         return True
 
-    def ban_users(self, text):
+    def ban_kick_pred_users(self, text, type):
         users = re.findall(r'id(\d+)\|@?', text())
         if len(users) == 0:
-            self.requests.send_msg(msg="И кого мне банить?")
+            if type == "ban":
+                self.requests.send_msg(msg="И кого мне банить?")
+            if type == "kick":
+                self.requests.send_msg(msg="И кого мне кикать?")
+            if type == "pred":
+                self.requests.send_msg(msg="И кому мне давать предупреждение?")
+            if type == "ro":
+                self.requests.send_msg(msg="И кому мне давать ReadOnly?")
             return True
         for user in users:
-            self.ban_user(user)
+            if type == "ban":
+                self.ban_user(user)
+            if type == "kick":
+                self.remove_chat_user(user)
+            if type == "pred":
+                self.pred_user(user)
+            # if type == "ro":
+                # print("")
         return True
 
-    def kik_users(self, text):
+    def un_users(self, text):
         users = re.findall(r'id(\d+)\|@?', text())
         if len(users) == 0:
-            self.requests.send_msg(msg="И кого мне кикать?")
-            return True
-        for user in users:
-            self.pred_user(user)
-        return True
-
-    def pred_users(self, text):
-        users = re.findall(r'id(\d+)\|@?', text())
-        if len(users) == 0:
-            self.requests.send_msg(msg="И кого мне банить?")
-            return True
-        for user in users:
-            self.pred_user(user)
-        return True
-
-    def ro_users(self, text):
-        users = re.findall(r'id(\d+)\|@?', text())
-        if len(users) == 0:
-            self.requests.send_msg(msg="И кого мне в рид-онли кидать?")
-            return True
-        # no
-        return True
-
-    def unban_users(self, text):
-        users = re.findall(r'id(\d+)\|@?', text())
-        if len(users) == 0:
-            self.requests.send_msg(msg="Ну ты выбери кого-нибудь...")
+            self.requests.send_msg(msg="Ну выберите кого-нибудь...")
             return True
         for user in users:
             stats = find_stats_addit_user_and_chat(user, self.chat_id)
             stats.is_banned = 0
             stats.is_pred = 0
             stats.save()
-
-    def unpred_users(self, text):
-        users = re.findall(r'id(\d+)\|@?', text())
-        if len(users) == 0:
-            self.requests.send_msg(msg="Ну ты выбери кого-нибудь...")
-            return True
-        for user in users:
-            stats = find_stats_addit_user_and_chat(user, self.chat_id)
-            stats.is_banned = 0
-            stats.is_pred = 0
-            stats.save()
-
-    def unro_users(self, text):
-        users = re.findall(r'id(\d+)\|@?', text())
-        if len(users) == 0:
-            self.requests.send_msg(msg="Ну ты выбери кого-нибудь...")
-            return True
-        # no
-        return True
+        self.requests.send_msg(msg="Готово!")

@@ -3,7 +3,7 @@ import random
 from typing import List, Dict
 from glob import glob
 
-from validators import ReactionSchema
+from lib.validators import ReactionSchema
 
 
 class Reactions:

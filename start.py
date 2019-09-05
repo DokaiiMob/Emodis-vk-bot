@@ -1,29 +1,17 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
 
-import os
+import vk
+import peewee
 from random import randint
 from requests import post
-from config import *
-from objects.DataBase import *
-from objects.User import *
-from objects.Chat import *
-from objects.Marrieds import *
-from objects.Stats import *
-from objects.StatsUser import *
-from objects.Settings import *
-from objects.TypeSet import *
-from objects.Texts import *
-
-import random
-import vk
-import re
-import Controller
-import peewee
-
+from config import VK_API_ACCESS_TOKEN, VK_API_VERSION, GROUP_ID
+from lib.DataBase import DataBase, IntegrityError, OperationalError
+from lib.Controller import Controller
+from models.Chat import find_chat
 
 api = vk.API(vk.Session(access_token=VK_API_ACCESS_TOKEN), v=VK_API_VERSION)
-controller = Controller.Controller()
+controller = Controller()
 db = DataBase()
 longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
 server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']

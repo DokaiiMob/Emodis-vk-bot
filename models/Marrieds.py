@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 import datetime
 from peewee import PrimaryKeyField, ForeignKeyField, DateTimeField, IntegerField
-from objects.DataBase import BaseModel
-from objects.User import User, try_user
-from objects.Chat import Chat, try_chat
+from lib.DataBase import BaseModel
+from models.User import User, try_user
+from models.Chat import Chat, try_chat
 
 
 class Marrieds(BaseModel):

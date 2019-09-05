@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 import datetime
 from peewee import fn, PrimaryKeyField, ForeignKeyField, DateTimeField, IntegerField
-from objects.DataBase import BaseModel
-from objects.User import User, try_user, add_user
-from objects.Chat import Chat, try_chat
-from objects.Stats import Stats
+from lib.DataBase import BaseModel
+from models.User import User, try_user, add_user
+from models.Chat import Chat, try_chat
+from models.Stats import Stats
 
 
 class StatsUser(BaseModel):

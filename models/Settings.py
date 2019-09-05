@@ -1,9 +1,9 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
 from peewee import PrimaryKeyField, ForeignKeyField, TextField, JOIN
-from objects.DataBase import BaseModel
-from objects.TypeSet import TypeSet
-from objects.Chat import Chat, try_chat
+from lib.DataBase import BaseModel
+from models.TypeSet import TypeSet
+from models.Chat import Chat, try_chat
 
 
 class Settings(BaseModel):

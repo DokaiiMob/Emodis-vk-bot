@@ -5,15 +5,14 @@ import re
 import requests
 import vk
 from config import GROUP_ID, VK_API_ACCESS_TOKEN, VK_API_VERSION
-from objects.DataBase import *
-from objects.User import *
-from objects.Chat import *
-from objects.Marrieds import *
-from objects.Stats import *
-from objects.StatsUser import *
-from objects.Settings import *
-from objects.TypeSet import *
-from objects.Texts import *
+from models.User import add_user, try_user, find_user
+from models.Chat import add_chat, try_chat, find_chat
+from models.Marrieds import add_marrieds, done_marry, del_marry_all, del_marry, get_marryieds
+from models.Stats import add_stats, find_all_stats_sum, find_all_stats_by_datetime, find_stats_user_and_chat
+from models.StatsUser import add_stats_user, get_duel_die, get_duel_save, find_all_stats_user, find_stats_addit_user_and_chat, get_preds_db, get_bans_db, get_users_by_limit, find_all_users_by_msg
+from models.Settings import add_set_default, get_null_settings, find_all_settings, settings_set, parser_settings, settings
+from models.TypeSet import find_all_type_set
+from models.Texts import add_text
 import locale
 import datetime
 
@@ -73,4 +72,7 @@ class Requests:
             return False
 
     def getConversationMembers(self):
-        return self.api.messages.getConversationMembers(peer_id=self.peer_id, group_id=GROUP_ID)['profiles']
+        try:
+            return self.api.messages.getConversationMembers(peer_id=self.peer_id, group_id=GROUP_ID)
+        except vk.exceptions.VkAPIError:
+            return False
