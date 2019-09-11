@@ -21,14 +21,28 @@ from lib.Mat import Mat
 
 
 class Controller:
-    def __init__(self):
+    def __init__(self, update_object):
         print("Controller init")
+        self.peer_id = update_object['peer_id']
+        self.chat = find_chat(self.peer_id - 2000000000)
+        self.user = find_user(update_object['from_id'])
+
+        self.settings = parser_settings(self.chat.id)
+        self.reply_message = False
+        if update_object.get('reply_message') and len(update_object['reply_message']) != 0:
+            self.reply_message = update_object['reply_message']
+        self.attachments = update_object['attachments']
+        self.text = update_object['text']
+        print("chat: {0} user: {1}".format(self.chat.id, self.user.id))
+
         self.reactions = Reactions()
-        self.actions = Actions()
+        self.actions = Actions(self.user.id, self.chat.id,
+                               self.peer_id, self.settings[1])
+        self.chat = self.actions.update_chat_data(self.chat)
         self.mat = Mat()
         self.mini_request_for_reply = {
             "бан": self.actions.ban_user, "пред": self.actions.pred_user, "кик": self.actions.remove_chat_user}
-        self.d = {'герой': {"actions": self.actions.get_hero},
+        self.d = {'герой': {"actions": self.actions.get_hero, "params": [self.get_settings], },
                   'топ': {"actions": self.actions.get_top},
                   'все преды': {"actions": self.actions.get_all_list, "params": ["pred"]},
                   'все баны': {"actions": self.actions.get_all_list, "params": ["ban"]},
@@ -55,23 +69,11 @@ class Controller:
                   'снять ро': {"actions": self.actions.un_users, "params": [self.get_text], "admin": True},
                   }
 
+    def get_settings(self):
+        return self.settings
+
     def get_text(self):
         return self.text
-
-    def update_temp_data(self, chat, user, update_object):
-        self.peer_id = update_object['peer_id']
-        self.chat = []
-        self.chat = self.actions.update_chat_data(chat)
-        self.user = user
-        self.settings = parser_settings(chat.id)
-        print("chat: {0} user: {1}".format(chat.id, user.id))
-        self.reply_message = False
-        if update_object.get('reply_message') and len(update_object['reply_message']) != 0:
-            self.reply_message = update_object['reply_message']
-        self.attachments = update_object['attachments']
-        self.text = update_object['text']
-        self.actions.update_temp_data(
-            self.user.id, self.chat.id, self.peer_id, self.settings[1])
 
     def update_user_stats(self):
         stats = find_stats_user_and_chat(self.user.id, self.chat.id)
@@ -104,7 +106,7 @@ class Controller:
         return old
 
     def add_text(self):
-        add_text(self.user.id, self.chat.id, self.text, self.attachments)
+        add_text(self.user, self.chat, self.text, self.attachments)
 
     def get_reaction(self):
         reaction = self.reactions.message_handler(self.text)
@@ -116,8 +118,9 @@ class Controller:
 
     def is_mini_request_for_reply(self):
         if self.mini_request_for_reply.get(self.text.lower()) and self.reply_message:
-            self.mini_request_for_reply[self.text.lower()](
-                self.reply_message.get('from_id'))
+            if self.get_is_admin():
+                self.mini_request_for_reply[self.text.lower()](
+                    self.reply_message.get('from_id'))
 
     def is_request_bot(self):
         if len(self.text) == 0:

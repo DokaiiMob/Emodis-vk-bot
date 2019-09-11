@@ -1,11 +1,10 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
-from random import randint
+from random import randint, choice
 import vk
 import re
 import requests
 from config import GROUP_ID
-# from objects.DataBase import *
 from models.User import add_user, try_user, find_user
 from models.Chat import add_chat, try_chat, find_chat
 from models.Marrieds import add_marrieds, done_marry, del_marry_all, del_marry, get_marryieds
@@ -23,17 +22,14 @@ import datetime
 class Actions:
     peer_id = 0
 
-    def __init__(self):
+    def __init__(self, user_id, chat_id, peer_id, max_pred):
         print("Actions init")
-        self.requests = Requests()
-
-    def update_temp_data(self, user_id, chat_id, peer_id, max_pred):
         self.is_ban_or_kik = False
         self.user_id = user_id
         self.chat_id = chat_id
         self.peer_id = peer_id
         self.max_pred = max_pred
-        self.requests.update_temp_data(peer_id, chat_id)
+        self.requests = Requests(peer_id, chat_id)
 
     def ban_user(self, id):
         stats = find_stats_addit_user_and_chat(id, self.chat_id)
@@ -91,6 +87,7 @@ class Actions:
     def update_chat_data(self, chat):
         now = datetime.datetime.now()
         timestamp = datetime.datetime.timestamp(now)
+
         if chat.cache_repeat + 3600 < timestamp:
             chat_data = self.requests.getConversationsById()
             if chat_data:
@@ -124,8 +121,22 @@ class Actions:
         if member_id == -GROUP_ID:
             self.bot_come_to_chat()
 
-    def get_hero(self):
-        self.requests.send_msg(msg="Пока что героя нет")
+    def get_hero(self, get_settings):
+        users = self.requests.getConversationMembers()
+        
+        if users:
+            settings_array = get_settings()
+            today = int(datetime.date.today().strftime("%j"))
+            if today != settings_array[5]:
+                choice_id = choice(users['profiles'])['id']
+                self.requests.send_msg(msg="Герой дня на сегодня ... @id{0}".format(choice_id))
+                settings_set(self.chat_id, 6, today)
+                settings_set(self.chat_id, 1, choice_id)
+            else:
+                self.requests.send_msg(msg="Герой дня на сегодня уже выбран @id{0}".format(settings_array[0]))
+        else:
+            self.requests.send_msg(
+                msg="У меня нет доступа к участникам беседы...")
         return True
 
     def get_top(self):
@@ -223,9 +234,8 @@ class Actions:
         return True
 
     def get_choise(self, text):
-        array = text().split('или')
         self.requests.send_msg(msg="Я выбираю {0}".format(
-            array[randint(0, len(array) - 1)].strip()))
+            choice(text().split('или')).strip()))
 
     def get_inform(self):
         self.requests.send_msg(

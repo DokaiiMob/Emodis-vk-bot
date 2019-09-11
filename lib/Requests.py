@@ -20,14 +20,12 @@ import datetime
 class Requests:
     peer_id = 0
 
-    def __init__(self):
+    def __init__(self, peer_id, chat_id):
         print("Requests init")
-        self.api = vk.API(vk.Session(
-            access_token=VK_API_ACCESS_TOKEN), v=VK_API_VERSION)
-
-    def update_temp_data(self, peer_id, chat_id):
         self.peer_id = peer_id
         self.chat_id = chat_id
+        self.api = vk.API(vk.Session(
+            access_token=VK_API_ACCESS_TOKEN), v=VK_API_VERSION)
 
     def find_update_user(self, member_id):
         user = find_user(member_id)

@@ -22,15 +22,13 @@ class Texts(BaseModel):
         order_by = ('id',)
 
 
-def add_text(user_id, chat_id, msg, attach):
-    user = try_user(user_id)
-    chat = try_chat(chat_id)
+def add_text(user, chat, msg, attach):
+    print(msg)
 
-    if user and chat:
-        row = Texts(
-            id_user=user,
-            id_chat=chat,
-            text=msg,
-            attach=attach
-        )
-        row.save(force_insert=True)
+    row = Texts(
+        id_user=user,
+        id_chat=chat,
+        text=msg,
+        attach=attach
+    )
+    row.save(force_insert=True)

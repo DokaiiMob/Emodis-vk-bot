@@ -74,7 +74,13 @@ def parser_settings(id_chat):
         # Ограничение на дуэль, в секундах
         if id_type == 5:
             duel_kd = int(settings.val)
-    return block_url_chat, max_pred, block_mat, duel_kd
+        # Герой дня
+        if id_type == 1:
+            hero_id = int(settings.val)
+        # Герой дня
+        if id_type == 6:
+            hero_day = int(settings.val)
+    return block_url_chat, max_pred, block_mat, duel_kd, hero_id, hero_day
 
 
 def settings(self, text):

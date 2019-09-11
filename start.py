@@ -11,7 +11,7 @@ from lib.Controller import Controller
 from models.Chat import find_chat
 
 api = vk.API(vk.Session(access_token=VK_API_ACCESS_TOKEN), v=VK_API_VERSION)
-controller = Controller()
+
 db = DataBase()
 longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
 server, key, ts = longPoll['server'], longPoll['key'], longPoll['ts']
@@ -34,9 +34,7 @@ while True:
 
     if longPoll.get('updates') and len(longPoll['updates']) != 0:
         for update in longPoll['updates']:
-            chat = find_chat(int(update['object']['peer_id']) - 2000000000)
-            user = controller.update_user(update['object']['from_id'])
-            controller.update_temp_data(chat, user, update['object'])
+            controller = Controller(update['object'])
 
             if update['object'].get('action'):
                 controller.action_parser(update['object']['action'])
@@ -49,6 +47,7 @@ while True:
                 if controller.is_request_bot():
                     controller.parse_command()
                 controller.duel()
+            del controller
     db.close_connection()
     if longPoll.get('failed'):
         longPoll = api.groups.getLongPollServer(group_id=GROUP_ID)
