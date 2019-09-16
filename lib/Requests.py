@@ -42,7 +42,7 @@ class Requests:
             -2147483647, 2147483647), message=msg)
 
     def remove_chat_user(self, id):
-        if id == GROUP_ID:
+        if id == GROUP_ID or id == -GROUP_ID:
             return False
         try:
             self.api.messages.removeChatUser(
