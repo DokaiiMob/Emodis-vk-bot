@@ -115,10 +115,11 @@ class Controller:
 
     def get_is_admin(self):
         self.is_admin = self.actions.is_admin()
+        return self.is_admin
 
     def is_mini_request_for_reply(self):
         if self.mini_request_for_reply.get(self.text.lower()) and self.reply_message:
-            if self.is_admin:
+            if self.get_is_admin():
                 self.mini_request_for_reply[self.text.lower()](
                     self.reply_message.get('from_id'))
 
