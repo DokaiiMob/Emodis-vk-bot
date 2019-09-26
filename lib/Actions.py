@@ -273,8 +273,11 @@ class Actions:
         return False
 
     def ban_last_users(self, count):
-        for users in get_users_by_limit(self.chat_id, int(count)):
-            self.ban_user(users.id)
+        if len(count()) == 0:
+            self.send_msg("Ну напишите сколько человек")
+            return True
+        for users in get_users_by_limit(self.chat_id, int(count())):
+            self.ban_user(users.id_user)
         return True
 
     def dog_kick(self):

@@ -49,7 +49,7 @@ class Requests:
                 chat_id=self.chat_id, member_id=id)
             return True
         except vk.exceptions.VkAPIError:
-            self.send_msg(msg='По какой-то причине нет доступа :(')
+            self.send_msg(msg='По какой-то причине нет доступа для @id{0}:('.format(id))
             return False
 
     def delete_msg(self, id):

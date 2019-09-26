@@ -73,7 +73,11 @@ def parser_settings(id_chat):
             block_mat = True
         # Ограничение на дуэль, в секундах
         if id_type == 5:
-            duel_kd = int(settings.val)
+            if not settings.val:
+                settings_set(id_chat,5, 60)
+                duel_kd = 60
+            else:
+                duel_kd = int(settings.val)
         # Герой дня
         if id_type == 1:
             hero_id = int(settings.val)
@@ -83,27 +87,27 @@ def parser_settings(id_chat):
     return block_url_chat, max_pred, block_mat, duel_kd, hero_id, hero_day
 
 
-def settings(self, text):
+def settings(chat_id, text):
     text_array = text.split(' ')
     if len(text_array) >= 2:
         type_set = int(text_array[0])
         val = text_array[1]
         if type_set == 1:
             if int(val) == 0 or int(val) == 1:
-                settings_set(self.chat_id, type_set, val)
+                settings_set(chat_id, type_set, val)
                 return True
         if type_set == 2:
             if int(val) == 0 or int(val) == 1:
-                settings_set(self.chat_id, type_set, val)
+                settings_set(chat_id, type_set, val)
                 return True
         if type_set == 3:
-            settings_set(self.chat_id, type_set, val)
+            settings_set(chat_id, type_set, val)
             return True
         if type_set == 4:
             if int(val) == 0 or int(val) == 1:
-                settings_set(self.chat_id, type_set, val)
+                settings_set(chat_id, type_set, val)
                 return True
         if type_set == 5:
-            settings_set(self.chat_id, type_set, val)
+            settings_set(chat_id, type_set, val)
             return True
     return False
