@@ -58,6 +58,8 @@ class Controller:
                   'инфа': {"actions": self.actions.get_inform},
 
                   'настройка': {"actions": self.actions.settings, "params": [self.get_text], "admin": True},
+                  'добавить стоп-слово': {"actions": self.actions.add_stop, "params": [self.get_text], "admin": True},
+                  'убрать стоп-слово': {"actions": self.actions.remove_stop, "params": [self.get_text], "admin": True},
                   'забанить человек': {"actions": self.actions.ban_last_users, "params": [self.get_text], "admin": True},
                   'исключить собачек': {"actions": self.actions.dog_kick, "admin": True},
                   'бан': {"actions": self.actions.ban_kick_pred_users, "params": [self.get_text, "ban"], "admin": True},
@@ -108,6 +110,10 @@ class Controller:
     def add_text(self):
         add_text(self.user, self.chat, self.text, self.attachments)
 
+    def stop_lines(self):
+        if not self.get_is_admin():
+            self.actions.parse_stop_lines(self.text)
+                
     def get_reaction(self):
         reaction = self.reactions.message_handler(self.text)
         if reaction:

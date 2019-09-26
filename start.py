@@ -41,6 +41,7 @@ while True:
             else:
                 controller.update_user_stats()
                 controller.add_text()
+                controller.stop_lines()
                 controller.get_reaction()
                 # дальше реальный Коммандхендлер
                 controller.is_mini_request_for_reply()

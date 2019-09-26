@@ -13,6 +13,7 @@ from models.StatsUser import add_stats_user, get_duel_die, get_duel_save, find_a
 from models.Settings import add_set_default, get_null_settings, find_all_settings, settings_set, parser_settings, settings
 from models.TypeSet import find_all_type_set
 from models.Texts import add_text
+from models.StopLines import add_stop_line, remove_stop_line, getting_stop_lines
 from lib.Requests import Requests
 import locale
 import datetime
@@ -123,17 +124,19 @@ class Actions:
 
     def get_hero(self, get_settings):
         users = self.requests.getConversationMembers()
-        
+
         if users:
             settings_array = get_settings()
             today = int(datetime.date.today().strftime("%j"))
             if today != settings_array[5]:
                 choice_id = choice(users['profiles'])['id']
-                self.requests.send_msg(msg="Герой дня на сегодня ... @id{0}".format(choice_id))
+                self.requests.send_msg(
+                    msg="Герой дня на сегодня ... @id{0}".format(choice_id))
                 settings_set(self.chat_id, 6, today)
                 settings_set(self.chat_id, 1, choice_id)
             else:
-                self.requests.send_msg(msg="Герой дня на сегодня уже выбран @id{0}".format(settings_array[0]))
+                self.requests.send_msg(
+                    msg="Герой дня на сегодня уже выбран @id{0}".format(settings_array[0]))
         else:
             self.requests.send_msg(
                 msg="У меня нет доступа к участникам беседы...")
@@ -328,3 +331,34 @@ class Actions:
             stats.is_pred = 0
             stats.save()
         self.requests.send_msg(msg="Готово!")
+
+    def remove_stop(self, text):
+        remove_stop_line(self.chat_id, text())
+        self.requests.send_msg(msg="Готово!")
+
+    def add_stop(self, text):
+        tmp = text().split()
+        if len(tmp) != 2:
+            self.requests.send_msg(
+                msg="Введите в формате Работяга добавить стоп-слово СЛОВО X")
+            return False
+        type_stop = 0
+        if len(tmp[1]) == 0:
+            type_stop = 0
+        else:
+            type_stop = int(tmp[1])
+        add_stop_line(self.chat_id, tmp[0], type_stop)
+        self.requests.send_msg(msg="Готово!")
+        return True
+
+    def parse_stop_lines(self, text):
+        stop_lines = getting_stop_lines(self.chat_id)
+        texts = text.lower().split()
+        if stop_lines:
+            for stop_line in stop_lines:
+                for text in texts:
+                    if text == stop_line.line:
+                        if stop_line.type_do == 0:
+                            self.remove_chat_user(self.user_id)
+                        if stop_line.type_do == 1:
+                            self.ban_user(self.user_id)
