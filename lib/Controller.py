@@ -111,7 +111,7 @@ class Controller:
 
     def stop_lines(self):
         if not self.get_is_admin():
-            if self.settings[3]:
+            if self.settings[2]:
                 self.actions.parse_mat(self.text)
             self.actions.parse_stop_lines(self.text)
 
