@@ -1,7 +1,7 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
 from peewee import PrimaryKeyField, ForeignKeyField, TextField, JOIN
-from lib.DataBase import BaseModel
+from models.BaseModel import BaseModel
 from models.TypeSet import TypeSet
 from models.Chat import Chat, try_chat
 
@@ -62,7 +62,7 @@ def parser_settings(id_chat):
     duel_kd = 5
     for settings in find_all_settings(id_chat):
         id_type = int(settings.id_type.id)
-        # Ссылки на чужие команды
+        # Ссылки на чужие беседы
         if id_type == 2 and int(settings.val) == 1:
             block_url_chat = True
         # Задать количество предупреждений

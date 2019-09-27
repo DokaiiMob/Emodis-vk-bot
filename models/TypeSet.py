@@ -1,7 +1,7 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
 from peewee import PrimaryKeyField, TextField
-from lib.DataBase import BaseModel
+from models.BaseModel import BaseModel
 
 
 class TypeSet(BaseModel):

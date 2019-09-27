@@ -3,12 +3,10 @@
 
 import vk
 import peewee
-from random import randint
 from requests import post
 from config import VK_API_ACCESS_TOKEN, VK_API_VERSION, GROUP_ID
 from lib.DataBase import DataBase, IntegrityError, OperationalError
 from lib.Controller import Controller
-from models.Chat import find_chat
 
 api = vk.API(vk.Session(access_token=VK_API_ACCESS_TOKEN), v=VK_API_VERSION)
 

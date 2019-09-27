@@ -28,7 +28,3 @@ class DataBase():
     def close_connection(self):
         self.dbhandle.close()
 
-
-class BaseModel(Model):
-    class Meta:
-        database = DataBase().get_db_handle()

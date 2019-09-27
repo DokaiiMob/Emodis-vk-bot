@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 from peewee import PrimaryKeyField, ForeignKeyField, DateTimeField, TextField
-from lib.DataBase import BaseModel
+from models.BaseModel import BaseModel
 from models.User import User, try_user
 from models.Chat import Chat, try_chat
 

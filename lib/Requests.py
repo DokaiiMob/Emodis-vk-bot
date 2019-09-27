@@ -60,12 +60,10 @@ class Requests:
         try:
             chat_data = self.api.messages.getConversationsById(
                 peer_ids=self.peer_id, group_id=GROUP_ID)
-            if chat_data['items']:
-                if chat_data['items'][0]:
-                    if chat_data['items'][0].get("chat_settings") and len(chat_data['items'][0]['chat_settings']) != 0:
-                        return chat_data['items'][0]['chat_settings']
-                    else:
-                        return False
+            if chat_data['items'] and chat_data['items'][0] and chat_data['items'][0].get("chat_settings") and len(chat_data['items'][0]['chat_settings']) != 0:
+                return chat_data['items'][0]['chat_settings']
+            else:
+                return False
         except vk.exceptions.VkAPIError:
             return False
 

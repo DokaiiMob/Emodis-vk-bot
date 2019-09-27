@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 from peewee import PrimaryKeyField, ForeignKeyField, DateTimeField, IntegerField
-from lib.DataBase import BaseModel
+from models.BaseModel import BaseModel
 from models.User import User, try_user
 from models.Chat import Chat, try_chat
 
@@ -61,24 +61,16 @@ def done_marry(chat_id, user_id):
 
 
 def del_marry_all(chat_id, user_id):
-    m = Marrieds.select().where(Marrieds.id_chat == chat_id, ((Marrieds.id_user_two == user_id) | (Marrieds.id_user_one == user_id)))
-    if m:
-        for _m in m:  
-            _m.id_chat = 0
-            _m.save()
-            return True
-    return False
+    m = Marrieds.delete().where(Marrieds.id_chat == chat_id, ((Marrieds.id_user_two == user_id) | (Marrieds.id_user_one == user_id)))
+    m.execute()
+    return True
 
 
 def del_marry(chat_id, user_id):
-    m = Marrieds.select().where(
+    m = Marrieds.delete().where(
         Marrieds.id_chat == int(chat_id), Marrieds.id_user_two == user_id)
-    if m:
-        for _m in m:  
-            _m.id_chat = 0
-            _m.save()
-            return True
-    return False
+    m.execute()
+    return True
 
 
 def get_marryieds(chat_id):

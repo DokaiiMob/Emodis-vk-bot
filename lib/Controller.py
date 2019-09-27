@@ -17,7 +17,6 @@ import locale
 import datetime
 from lib.Actions import Actions
 from lib.reactions import Reactions
-from lib.Mat import Mat
 
 
 class Controller:
@@ -33,13 +32,13 @@ class Controller:
             self.reply_message = update_object['reply_message']
         self.attachments = update_object['attachments']
         self.text = update_object['text']
+        
         print("chat: {0} user: {1}".format(self.chat.id, self.user.id))
 
         self.reactions = Reactions()
         self.actions = Actions(self.user.id, self.chat.id,
                                self.peer_id, self.settings[1])
         self.chat = self.actions.update_chat_data(self.chat)
-        self.mat = Mat()
         self.mini_request_for_reply = {
             "бан": self.actions.ban_user, "пред": self.actions.pred_user, "кик": self.actions.remove_chat_user}
         self.d = {'герой': {"actions": self.actions.get_hero, "params": [self.get_settings], },
@@ -112,8 +111,10 @@ class Controller:
 
     def stop_lines(self):
         if not self.get_is_admin():
+            if self.settings[3]:
+                self.actions.parse_mat(self.text)
             self.actions.parse_stop_lines(self.text)
-                
+
     def get_reaction(self):
         reaction = self.reactions.message_handler(self.text)
         if reaction:
@@ -124,16 +125,15 @@ class Controller:
         return self.is_admin
 
     def is_mini_request_for_reply(self):
-        if self.mini_request_for_reply.get(self.text.lower()) and self.reply_message:
-            if self.get_is_admin():
-                self.mini_request_for_reply[self.text.lower()](
-                    self.reply_message.get('from_id'))
+        if self.mini_request_for_reply.get(self.text.lower()) and self.reply_message and self.get_is_admin():
+            self.mini_request_for_reply[self.text.lower()](
+                self.reply_message.get('from_id'))
 
     def is_request_bot(self):
         if len(self.text) == 0:
             return False
         text = re.sub(
-            r'^(бот|работяга|\[club183796256\|\@kanbase\])(\s)?(,)?\s', '', self.text, flags=re.IGNORECASE)
+            r'^(работяга|\[club183796256\|\@kanbase\])(\s)?(,)?\s', '', self.text, flags=re.IGNORECASE)
         if len(text) < len(self.text):
             # убрать начальный текст
             self.text = text

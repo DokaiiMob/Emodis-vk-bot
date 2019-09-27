@@ -16,3 +16,6 @@ class Mat:
         if match:
             return True
         return False
+
+
+mat = Mat()

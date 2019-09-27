@@ -15,9 +15,9 @@ from models.TypeSet import find_all_type_set
 from models.Texts import add_text
 from models.StopLines import add_stop_line, remove_stop_line, getting_stop_lines
 from lib.Requests import Requests
+from lib.Mat import mat
 import locale
 import datetime
-# Объект действий робота
 
 
 class Actions:
@@ -37,9 +37,11 @@ class Actions:
         stats.is_banned = 1 if self.remove_chat_user(id) else 0
         stats.save()
 
-    def pred_user(self, id):
+    def pred_user(self, id, text = ""):
         stats = find_stats_addit_user_and_chat(id, self.chat_id)
         stats.is_pred = stats.is_pred + 1
+        self.requests.send_msg(msg="{0} Предупреждение {1} из {2}".format(
+            text, stats.is_pred, self.max_pred))
         if int(stats.is_pred) >= int(self.max_pred):
             # По сути надо выбирать что делать роботу
             # stats.is_banned = 1
@@ -48,9 +50,7 @@ class Actions:
             # И парсить максимальное кол-во
             self.remove_chat_user(id)
         stats.save()
-        self.requests.send_msg(msg="Предупреждение {0} из {1}".format(
-            stats.is_pred, self.max_pred))
-
+        
     def remove_chat_user(self, id):
         return self.requests.remove_chat_user(id)
 
@@ -136,7 +136,7 @@ class Actions:
                 settings_set(self.chat_id, 1, choice_id)
             else:
                 self.requests.send_msg(
-                    msg="Герой дня на сегодня уже выбран @id{0}".format(settings_array[0]))
+                    msg="Герой дня на сегодня уже выбран @id{0}".format(settings_array[4]))
         else:
             self.requests.send_msg(
                 msg="У меня нет доступа к участникам беседы...")
@@ -362,3 +362,7 @@ class Actions:
                             self.remove_chat_user(self.user_id)
                         if stop_line.type_do == 1:
                             self.ban_user(self.user_id)
+
+    def parse_mat(self, text):
+        if mat.check_slang(text):
+            self.pred_user(self.user_id, "Некультурно общаемся?")
