@@ -93,6 +93,17 @@ class Controller:
         stats = find_stats_addit_user_and_chat(self.user.id, self.chat.id)
         stats.len = stats.len + len(self.text)
         stats.date_time_last_msg = datetime.datetime.now()
+        if len(self.text) > 5:
+            stats.percent_divider = stats.percent_divider + 1
+            sentiment = self.actions.parse_senstiment(self.text)
+            print(sentiment)
+            if sentiment.get('negative'):
+                stats.percent_negative += sentiment.get('negative')
+            if sentiment.get('neutral'):
+                stats.percent_neutral += sentiment.get('neutral')
+            if sentiment.get('positive'):
+                stats.percent_positive += sentiment.get('positive')
+                
 
         stats.lvl = self.update_level_msg(stats.lvl)
         stats.save()

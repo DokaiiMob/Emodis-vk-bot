@@ -1,7 +1,7 @@
 # /usr/bin/env python3.7
 # -*- coding: utf-8 -*-
 import datetime
-from peewee import fn, PrimaryKeyField, ForeignKeyField, DateTimeField, IntegerField
+from peewee import fn, PrimaryKeyField,  FloatField, ForeignKeyField, DateTimeField, IntegerField
 from models.BaseModel import BaseModel
 from models.User import User, try_user, add_user
 from models.Chat import Chat, try_chat
@@ -25,6 +25,10 @@ class StatsUser(BaseModel):
     lvl = IntegerField(null=False, default=0)
     count_duel_save = IntegerField(null=False, default=0)
     count_duel_die = IntegerField(null=False, default=0)
+    percent_positive = FloatField(null=False, default=0)
+    percent_negative = FloatField(null=False, default=0)
+    percent_neutral = FloatField(null=False, default=0)
+    percent_divider = IntegerField(null=False, default=0)
 
     class Meta:
         db_table = "user_to_chat"

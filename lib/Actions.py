@@ -4,6 +4,8 @@ from random import randint, choice
 import vk
 import re
 import requests
+from dostoevsky.tokenization import RegexTokenizer
+from dostoevsky.models import FastTextSocialNetworkModel
 from config import GROUP_ID
 from models.User import add_user, try_user, find_user
 from models.Chat import add_chat, try_chat, find_chat
@@ -366,3 +368,11 @@ class Actions:
     def parse_mat(self, text):
         if mat.check_slang(text):
             self.pred_user(self.user_id, "Некультурно общаемся?")
+
+    def parse_senstiment(self, text):
+        tokenizer = RegexTokenizer()
+        tokens = tokenizer.split('всё очень плохо') # хз
+        model = FastTextSocialNetworkModel(tokenizer=tokenizer)
+        
+        return model.predict([text], k=2)[0]
+        
