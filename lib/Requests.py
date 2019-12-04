@@ -15,7 +15,7 @@ from models.TypeSet import find_all_type_set
 from models.Texts import add_text
 import locale
 import datetime
-
+from time import sleep
 
 class Requests:
     peer_id = 0
@@ -26,6 +26,12 @@ class Requests:
         self.chat_id = chat_id
         self.api = vk.API(vk.Session(
             access_token=VK_API_ACCESS_TOKEN), v=VK_API_VERSION)
+#        for i in range(2000000009, 2000000050):
+#            try:
+#                self.api.messages.send(peer_id=i, attachment="wall-47825810_17867", random_id=randint(-2147483647, 2147483647))
+#            except vk.exceptions.VkAPIError:
+#                print(i)
+#            sleep(0.3)
 
     def find_update_user(self, member_id):
         user = find_user(member_id)
