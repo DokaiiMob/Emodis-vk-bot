@@ -8,7 +8,7 @@ from lib.validators import ReactionSchema
 
 class Reactions:
     def __init__(self):
-        print("Init Reactions")
+        # print("Init Reactions")
         self._reactions = self.load_reactions()
 
     @staticmethod
@@ -19,8 +19,8 @@ class Reactions:
         for file in reactions_files:
             with open(file, encoding='utf-8') as f:
                 validated_data = schema.loads(f.read())
-                if validated_data.errors:
-                    print("{0} error file".format(f.name))
+#                if validated_data.errors:
+#                    print("{0} error file".format(f.name))
                 reactions += validated_data.data
         return reactions
 

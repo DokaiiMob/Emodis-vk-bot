@@ -13,7 +13,7 @@ class DataBase():
     )
 
     def __init__(self):
-        print("Init DataBase")
+        # print("Init DataBase")
         self.get_db_handle()
 
     def get_db_handle(self):

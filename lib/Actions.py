@@ -10,7 +10,7 @@ from models.Chat import add_chat, try_chat, find_chat
 from models.Marrieds import add_marrieds, done_marry, del_marry_all, del_marry, get_marryieds
 from models.Stats import add_stats, find_all_stats_sum, find_all_stats_by_datetime, find_stats_user_and_chat
 from models.StatsUser import add_stats_user, get_duel_die, get_duel_save, find_all_stats_user, find_stats_addit_user_and_chat, get_preds_db, get_bans_db, get_users_by_limit, find_all_users_by_msg
-from models.Settings import add_set_default, get_null_settings, find_all_settings, settings_set, parser_settings, settings
+from models.Settings import add_set_default, get_null_settings, find_all_settings, settings_set, parser_settings, settings, getListChats
 from models.TypeSet import find_all_type_set
 from models.Texts import add_text
 from models.StopLines import add_stop_line, remove_stop_line, getting_stop_lines
@@ -24,7 +24,7 @@ class Actions:
     peer_id = 0
 
     def __init__(self, user_id, chat_id, peer_id, max_pred):
-        print("Actions init")
+        # print("Actions init")
         self.is_ban_or_kik = False
         self.user_id = user_id
         self.chat_id = chat_id
@@ -35,6 +35,10 @@ class Actions:
     def ban_user(self, id):
         stats = find_stats_addit_user_and_chat(id, self.chat_id)
         stats.is_banned = 1 if self.remove_chat_user(id) else 0
+        stats.save()
+    def ban_user_by_id(self, id, chat_id):
+        stats = find_stats_addit_user_and_chat(id, chat_id)
+        stats.is_banned = 1 if self.requests.remove_chat_user_by_chat_id(id, chat_id) else 0
         stats.save()
 
     def pred_user(self, id, text = ""):
@@ -146,6 +150,10 @@ class Actions:
         self.send_msg(
             msg="Статистика: kanbase.ru/c/{0}".format((self.chat_id)))  # *0x45785
         return True
+    
+    def get_help(self):
+        self.send_msg(msg="Привет! Держи ссылку на команды: https://vk.com/@kanbase-komandy-bota")
+        return True
 
     def get_all_list(self, params):
         if params == "pred":
@@ -220,7 +228,10 @@ class Actions:
             self.requests.send_msg(msg="Поздравляю:)")
         return True
 
-    def get_married(self, text):
+    def get_married(self, text, is_may):
+        if is_may:
+            self.requests.send_msg(msg="Творческий режим выключен")
+            return True
         users = re.findall(r'id(\d+)\|@?', text())
         if len(users) == 0:
             self.requests.send_msg(msg="Выберите участника беседы через @")
@@ -248,15 +259,26 @@ class Actions:
     def settings(self, text):
         text_array = text().strip().split(' ')
         if len(text_array) >= 2:
-            type_set = int(text_array[0])
+            try:
+                type_set = int(text_array[0])
+            except:
+                return False
             val = text_array[1]
             if type_set == 1:
-                if int(val) == 0 or int(val) == 1:
+                try:
+                    val = int(val)
+                except:
+                    return False
+                if val == 0 or val == 1:
                     settings_set(self.chat_id, type_set, val)
                     self.requests.send_msg(msg="Сохранено!")
                     return True
             if type_set == 2:
-                if int(val) == 0 or int(val) == 1:
+                try:
+                    val = int(val)
+                except:
+                    return False
+                if val == 0 or val == 1:
                     settings_set(self.chat_id, type_set, val)
                     self.requests.send_msg(msg="Сохранено!")
                     return True
@@ -265,11 +287,24 @@ class Actions:
                 self.requests.send_msg(msg="Сохранено!")
                 return True
             if type_set == 4:
-                if int(val) == 0 or int(val) == 1:
+                try:
+                    val = int(val)
+                except:
+                    return False
+                if val == 0 or val == 1:
                     settings_set(self.chat_id, type_set, val)
                     self.requests.send_msg(msg="Сохранено!")
                     return True
             if type_set == 5:
+                try:
+                    val = int(val)
+                except:
+                    return False
+                settings_set(self.chat_id, type_set, val)
+                self.requests.send_msg(msg="Сохранено!")
+                return True
+            if type_set == 7:
+                val = val.replace(' ', '')
                 settings_set(self.chat_id, type_set, val)
                 self.requests.send_msg(msg="Сохранено!")
                 return True
@@ -277,7 +312,7 @@ class Actions:
 
     def ban_last_users(self, count):
         if len(count()) == 0:
-            self.send_msg("Ну напишите сколько человек")
+            self.send_msg("Напишите сколько человек")
             return True
         for users in get_users_by_limit(self.chat_id, int(count())):
             self.ban_user(users.id_user)
@@ -318,6 +353,34 @@ class Actions:
                 self.pred_user(user)
             # if type == "ro":
                 # print("")
+        return True
+    
+    def superban_user(self, id):
+        listChats = getListChats(self.chat_id, settings)
+        if not listChats or len(listChats) == 0:
+            self.requests.send_msg(msg="Не настроено")
+            return True
+        for chatL in listChats:
+            self.ban_user_by_id(user, chatL)
+            stats = find_stats_addit_user_and_chat(id, chatL)
+            stats.is_banned = 1 if self.requests.remove_chat_user_by_chat_id(id, chatL) else 0
+            stats.save()
+
+    
+    def superban(self, text, settings):
+        # print(settings)
+        listChats = getListChats(self.chat_id, settings)
+        if not listChats or len(listChats) == 0:
+            self.requests.send_msg(msg="Не настроено")
+            return True
+        users = re.findall(r'id(\d+)\|@?', text())
+        if len(users) == 0:
+            self.requests.send_msg(msg="И кого мне банить?")
+            return True
+        for user in users:
+            # self.ban_user(user)
+            for chatL in listChats:
+                self.ban_user_by_id(user, chatL)
         return True
 
     def un_users(self, text):

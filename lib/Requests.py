@@ -21,11 +21,12 @@ class Requests:
     peer_id = 0
 
     def __init__(self, peer_id, chat_id):
-        print("Requests init")
+        # print("Requests init")
         self.peer_id = peer_id
         self.chat_id = chat_id
         self.api = vk.API(vk.Session(
             access_token=VK_API_ACCESS_TOKEN), v=VK_API_VERSION)
+#        self.api.messages.removeChatUser(chat_id=18, member_id=268833961)
 #        for i in range(2000000009, 2000000050):
 #            try:
 #                self.api.messages.send(peer_id=i, attachment="wall-47825810_17867", random_id=randint(-2147483647, 2147483647))
@@ -56,6 +57,16 @@ class Requests:
             return True
         except vk.exceptions.VkAPIError:
             self.send_msg(msg='По какой-то причине нет доступа для @id{0}:('.format(id))
+            return False
+    def remove_chat_user_by_chat_id(self, id, chat_id):
+        if id == GROUP_ID or id == -GROUP_ID:
+            return False
+        try:
+            self.api.messages.removeChatUser(
+                chat_id=chat_id, member_id=id)
+            return True
+        except vk.exceptions.VkAPIError:
+            # self.send_msg(msg='По какой-то причине нет доступа для @id{0}:('.format(id))
             return False
 
     def delete_msg(self, id):

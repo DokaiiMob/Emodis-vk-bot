@@ -21,7 +21,8 @@ from lib.reactions import Reactions
 
 class Controller:
     def __init__(self, update_object):
-        print("Controller init")
+        # print("Controller init")
+        # print(update_object)
         self.peer_id = update_object['peer_id']
         self.chat = find_chat(self.peer_id - 2000000000)
         self.user = find_user(update_object['from_id'])
@@ -32,17 +33,24 @@ class Controller:
             self.reply_message = update_object['reply_message']
         self.attachments = update_object['attachments']
         self.text = update_object['text']
-        
         print("chat: {0} user: {1}".format(self.chat.id, self.user.id))
 
         self.reactions = Reactions()
         self.actions = Actions(self.user.id, self.chat.id,
                                self.peer_id, self.settings[1])
+
         self.chat = self.actions.update_chat_data(self.chat)
         self.mini_request_for_reply = {
-            "бан": self.actions.ban_user, "пред": self.actions.pred_user, "кик": self.actions.remove_chat_user}
+            "бан": self.actions.ban_user,
+            "супербан": self.actions.superban_user,
+            "пред": self.actions.pred_user,
+            "кик": self.actions.remove_chat_user
+        }
+        # a = self.actions.requests.api.messages.delete(delete_for_all=1,message_ids=update_object['conversation_message_id'],group_id=GROUP_ID)
+        # print(a)
         self.d = {'герой': {"actions": self.actions.get_hero, "params": [self.get_settings], },
                   'топ': {"actions": self.actions.get_top},
+                  'помощь': {"actions": self.actions.get_help},
                   'все преды': {"actions": self.actions.get_all_list, "params": ["pred"]},
                   'все баны': {"actions": self.actions.get_all_list, "params": ["ban"]},
                   'все браки': {"actions": self.actions.get_all_marry},
@@ -51,12 +59,13 @@ class Controller:
                   'развод': {"actions": self.actions.remove_married},
                   'брак нет': {"actions": self.actions.delete_married},
                   'брак да': {"actions": self.actions.save_married},
-                  'брак': {"actions": self.actions.get_married, "params": [self.get_text], },
+                  'брак': {"actions": self.actions.get_married, "params": [self.get_text, self.settings[6]], },
 
                   'выбери': {"actions": self.actions.get_choise, "params": [self.get_text]},
                   'инфа': {"actions": self.actions.get_inform},
 
                   'настройка': {"actions": self.actions.settings, "params": [self.get_text], "admin": True},
+                  'супербан': {"actions": self.actions.superban, "params": [self.get_text, self.settings[7]], "admin": True},
                   'добавить стоп-слово': {"actions": self.actions.add_stop, "params": [self.get_text], "admin": True},
                   'убрать стоп-слово': {"actions": self.actions.remove_stop, "params": [self.get_text], "admin": True},
                   'забанить человек': {"actions": self.actions.ban_last_users, "params": [self.get_text], "admin": True},
@@ -116,9 +125,10 @@ class Controller:
             self.actions.parse_stop_lines(self.text)
 
     def get_reaction(self):
-        reaction = self.reactions.message_handler(self.text)
-        if reaction:
-            self.actions.send_msg(msg=reaction)
+        if self.settings[6]:
+            reaction = self.reactions.message_handler(self.text)
+            if reaction:
+                self.actions.send_msg(msg=reaction)
 
     def get_is_admin(self):
         self.is_admin = self.actions.is_admin()
@@ -173,10 +183,10 @@ class Controller:
             self.actions.is_chat_invite_user(action['member_id'])
         if action['type'] == 'chat_invite_user_by_link':
             self.actions.is_chat_invite_user(self.user.id)
-        if action['type'] == 'chat_title_update':
-            print("chat title")
-        if action['type'] == 'chat_kick_user':
-            print("kick_user or user_exit")
+        # if action['type'] == 'chat_title_update':
+        #     print("chat title")
+        # if action['type'] == 'chat_kick_user':
+        #     print("kick_user or user_exit")
 
     def date_duel_kd(self, sec):
         if sec > 60:
@@ -186,6 +196,9 @@ class Controller:
 
     def duel(self):
         if self.text.lower() != "дуэль":
+            return False
+        if self.settings[6]:
+            self.actions.send_msg(msg="Дуэли выключены")
             return False
         if self.chat.date_last_duel and (datetime.datetime.now()-self.chat.date_last_duel).total_seconds() < self.settings[3]:
             self.actions.send_msg(
